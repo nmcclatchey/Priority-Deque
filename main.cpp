@@ -12,9 +12,10 @@
 
 int main();
 
+//! @todo More tests!
 
 #define BENCHMARK
-//#define VERIFY_HEAP
+#define VERIFY_HEAP
 
 typedef uint32_t test_type;
 
@@ -56,7 +57,7 @@ int main() {
 //  Test performance relative to std::priority_queue.
 #ifdef BENCHMARK
 {
-  const unsigned benchmark_elements = 40000000;
+  const unsigned benchmark_elements = 20000000;
   std::cout << "PD: ";
   benchmark_priority_queue<priority_deque<test_type> >(benchmark_elements);
   std::cout << "PQ: ";
@@ -66,7 +67,7 @@ int main() {
 
 #ifdef VERIFY_HEAP
   std::cout << "\n\nTesting heap integrity after:\n";
-  const int element_total = 3000;//8192 * 2000;
+  const int element_total = 3001;//8192 * 2000;
 	priority_deque<uint32_t> pd;
 
   std::cout << "'push' (" << element_total << "x)\n";
@@ -77,15 +78,35 @@ int main() {
       break;
 		}
 	}
-	pd.clear();
 
+  srand(25346);
   std::vector<uint32_t> v;
-  for (int n = 1; n <= element_total; ++n)
+  for (int n = 1; n <= 5; ++n)
 		v.push_back(rand());
-	std::cout << "'merge' (" << element_total << " elements)\n";
-	pd.merge(v.begin(), v.end());
-	if (is_valid_until(pd) != pd.end())
-    std::cout << "Failed merge (error in make_valid)\n";
+  for (int n = 1; n <= 1; ++n) {
+    std::cout << "'merge' (" << v.size() << " elements)\n";
+
+    /*for (auto it = v.begin(); it != v.end(); ++it)
+      std::cout << *it << ", ";
+    std::cout << "\n";*/
+    boost::heap::make_interval_heap(v.begin(), v.end(), std::less<uint32_t>());
+    if (!boost::heap::is_interval_heap(v.begin(), v.end(), std::less<uint32_t>())) {
+      std::cout << "Failed\n";
+      for (auto it = v.begin(); it != v.end(); ++it)
+        std::cout << *it << ", ";
+      std::cout << "\n";
+    }
+    std::random_shuffle(v.begin(), v.end());
+    v.push_back(rand());
+  }
+  /*for (int n = 1; n < 64; ++n) {
+    std::cout << "'merge' (" << v.size() << " elements)\n";
+    pd.clear();
+    pd.merge(v.begin(), v.end());
+    if (is_valid_until(pd) != pd.end())
+      std::cout << "Failed merge (error in make_valid)\n";
+    v.push_back(rand());
+  }*/
 
   std::cout << "'set' (" << element_total << "x)\n";
   for (int t = 0; t < element_total; ++t) {
