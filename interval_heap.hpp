@@ -68,7 +68,7 @@ void pop_interval_heap (Iterator first, Iterator last,
 //!@}
 //! @brief Restores the interval-heap property if one element violates it.
 template <typename Iterator, typename Compare>
-void sift_interval_heap (Iterator first, Iterator last,
+void update_interval_heap (Iterator first, Iterator last,
            typename std::iterator_traits<Iterator>::difference_type index,
            Compare compare);
 
@@ -122,7 +122,7 @@ void sift_down (Iterator first, Iterator last, Offset index, Compare compare,
 //  guarantee. Strong if they do not throw exceptions.
 */
 template <typename Iterator, typename Compare>
-void sift_interval_heap (Iterator first, Iterator last,
+void update_interval_heap (Iterator first, Iterator last,
            typename std::iterator_traits<Iterator>::difference_type index,
            Compare compare)
 {
@@ -176,7 +176,7 @@ void pop_interval_heap (Iterator first, Iterator last,
   --last;
   swap(*(first + index), *last);
   try {
-    sift_interval_heap<Iterator, Compare>(first, last, index, compare);
+    update_interval_heap<Iterator, Compare>(first, last, index, compare);
   } catch (...) {
 //  Roll back for strong guarantee.
     swap(*last, *(first + index));
@@ -191,8 +191,8 @@ void pop_interval_heap (Iterator first, Iterator last,
 //  @param first,last A range of random-access iterators.
 //  @param compare A comparison object.
 //  @pre [ @a first, @a last) is a valid interval heap.
-//  @post [ @a first, @a last - 1) is a valid interval heap.
 //  @post A minimal element from the range has been moved to @a last - 1.
+//  @post [ @a first, @a last - 1) is a valid interval heap.
 //  @invariant No element is added to or removed from the range.
 //  @remark Complexity: O(log n)
 //  @remark Exception safety: As strong as sift_interval_heap.
@@ -220,8 +220,8 @@ void pop_interval_heap_min (Iterator first, Iterator last, Compare compare) {
 //  @param first,last A range of random-access iterators.
 //  @param compare A comparison object.
 //  @pre [ @a first, @a last) is a valid interval heap.
-//  @post [ @a first, @a last - 1) is a valid interval heap.
 //  @post A maximal element from the range has been moved to @a last - 1.
+//  @post [ @a first, @a last - 1) is a valid interval heap.
 //  @invariant No element is added to or removed from the range.
 //  @remark Complexity: O(log n)
 //  @remark Exception safety: As strong as sift_interval_heap.
@@ -265,17 +265,18 @@ void sort_interval_heap (Iterator first, Iterator last, Compare compare) {
   }
 }
 
-//! @brief Finds the largest subrange that qualifies as an interval heap.
+//! @brief Finds the largest subrange that forms a valid interval heap.
 //! @remark Exception safety: Non-throwing
 template <typename Iterator, typename Compare>
 Iterator is_interval_heap_until (Iterator first, Iterator last, Compare compare)
 {
   using namespace std;
   typedef typename iterator_traits<Iterator>::difference_type Offset;
+
   Offset index = static_cast<Offset>(0);
-  Offset index_end = last - first;
 
   try {
+    Offset index_end = last - first;
     while (index < index_end) {
       Iterator cursor = first + index;
 //  Check whether it is a valid interval.
@@ -301,7 +302,8 @@ Iterator is_interval_heap_until (Iterator first, Iterator last, Compare compare)
   }
   return last;
 }
-//! @brief Checks whether the range is an interval heap.
+
+//! @brief Checks whether the range is a valid interval heap.
 //! @remark Exception safety: Non-throwing
 template <typename Iterator, typename Compare>
 bool is_interval_heap (Iterator first, Iterator last, Compare compare) {
@@ -416,7 +418,7 @@ void sift_leaf_max (Iterator first, Iterator last, Offset index,
     try {
       sift_up<true, Iterator, Offset, Compare>(first, co_index, compare,
                                                limit_child);
-    } catch (...) { //  Attempt a rollback.
+    } catch (...) { //  Rollback for strong guarantee.
       swap(*(first + index), *(first + co_index));
       throw;
     }
@@ -448,7 +450,7 @@ void sift_leaf_min (Iterator first, Iterator last, Offset index,
     try {
       sift_up<false, Iterator, Offset, Compare>(first, co_index, compare,
                                                 limit_child);
-    } catch (...) { //  Attempt a rollback.
+    } catch (...) { //  Rollback for strong guarantee.
       swap(*(first + index), *(first + co_index));
       throw;
     }
@@ -467,25 +469,25 @@ void sift_down (Iterator first, Iterator last, Offset origin, Compare compare,
 //  By keeping track of where I started, I can roll back all changes.
   Offset index = origin;
 #if (__cplusplus >= 201103L)  //  C++11
-  Value swap_space = std::move_if_noexcept(*(first + index));
+  Value limbo = std::move_if_noexcept(*(first + index));
 #endif
 
   const Offset index_end = last - first;
 //  One past the last element with two children.
   const Offset end_parent = index_end / 2 -
                               ((left_bound && ((index_end & 3) == 0)) ? 2 : 1);
-  try {
+  try { //  This try-catch block rolls back after exceptions.
     while (index < end_parent) {
       Offset child = index * 2 + (left_bound ? 2 : 1);
 //  If compare throws, heap property cannot be verified or enforced.
-      try {
+      try { //  This try-catch block ensures no element is left in limbo.
         if (compare(*(first + child + (left_bound ? 2 : 0)),
                     *(first + child + (left_bound ? 0 : 2))))
           child += 2;
       } catch (...) {
 #if (__cplusplus >= 201103L)  //  C++11
-//  Compare failed, so the heap property is inderminable, but this avoids leaks.
-        *(first + index) = std::move_if_noexcept(swap_space);
+//  Pull the moving element out of limbo, to avoid leaks.
+        *(first + index) = std::move_if_noexcept(limbo);
 #endif
         throw;
       }
@@ -500,28 +502,32 @@ void sift_down (Iterator first, Iterator last, Offset origin, Compare compare,
     if (index <= end_parent + (left_bound ? 0 : 1)) {
       Offset child = index * 2 + (left_bound ? 2 : 1);
       if (child < index_end) {
-//  Need to handle singletons as both min and max.
+//  Need to treat singletons (child + 1) as both upper and lower bounds.
         if (!left_bound && (child + 1 < index_end)) {
+//  Calculating this outside the if-statement simplifies exception-handling.
+          bool swap_required;
           try {
-            if (compare(*(first + child), *(first + child + 1))) {
-              ++child;
-#if (__cplusplus >= 201103L)  //  C++11
-              *(first + index) = std::move_if_noexcept(*(first + child));
-              *(first + child) = std::move_if_noexcept(swap_space);
-#else
-              swap(*(first + index), *(first + child));
-#endif
-//  Important for the rollback.
-              index = child;
-              sift_leaf_min<Iterator, Offset, Compare>(first, last, child,
-                                                       compare, limit_child);
-              return;
-            }
+            swap_required = compare(*(first + child), *(first + child + 1));
           } catch (...) {
+//  Pull the moving element out of limbo.
 #if (__cplusplus >= 201103L)
-            *(first + index) = std::move_if_noexcept(swap_space);
+            *(first + index) = std::move_if_noexcept(limbo);
 #endif
             throw;
+          }
+          if (swap_required) {
+            ++child;
+#if (__cplusplus >= 201103L)  //  C++11
+            *(first + index) = std::move_if_noexcept(*(first + child));
+            *(first + child) = std::move_if_noexcept(limbo);
+#else
+            swap(*(first + index), *(first + child));
+#endif
+//  Important for the rollback.
+            index = child;
+            sift_leaf_min<Iterator, Offset, Compare>(first, last, index,
+                                                     compare, limit_child);
+            return;
           }
         }
 #if (__cplusplus >= 201103L)  //  C++11
@@ -532,8 +538,9 @@ void sift_down (Iterator first, Iterator last, Offset origin, Compare compare,
         index = child;
       }
     }
+//  Pull the moving element out of limbo.
 #if (__cplusplus >= 201103L)  //  C++11
-    *(first + index) = std::move_if_noexcept(swap_space);
+    *(first + index) = std::move_if_noexcept(limbo);
 #endif
     if (left_bound)
       sift_leaf_min<Iterator, Offset, Compare>(first, last, index, compare,
@@ -542,7 +549,7 @@ void sift_down (Iterator first, Iterator last, Offset origin, Compare compare,
       sift_leaf_max<Iterator, Offset, Compare>(first, last, index, compare,
                                                limit_child);
   } catch (...) {
-//  Note: This rolls back comparison exceptions. Move exceptions can't be fixed.
+//  Rolls back comparison exceptions. Move exceptions can't be reliably fixed.
     while (index > origin) {
       const Offset parent = ((index / 2 - 1) | 1) ^ (left_bound ? 1 : 0);
       swap(*(first + parent), *(first + index));
