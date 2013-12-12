@@ -1,5 +1,9 @@
 //#define NDEBUG 1
 
+#ifndef __cplusplus
+#error A C++ compiler is required.
+#endif
+
 #include <vector>
 #include <queue>
 #include <iostream>
@@ -16,8 +20,6 @@ int main();
 
 #define BENCHMARK
 #define VERIFY_HEAP
-
-typedef uint32_t test_type;
 
 template <typename pq_t>
 void benchmark_priority_queue (unsigned benchmark_elements) {
@@ -43,25 +45,72 @@ void benchmark_priority_queue (unsigned benchmark_elements) {
 }
 
 int main() {
-#ifdef __cplusplus
   std::cout << "__cplusplus = " << __cplusplus << "\n";
-#endif
 #ifndef NDEBUG
 	std::cout << "Debug mode (asserts active).\n";
 #endif
   srand(clock());
 
   using boost::container::priority_deque;
+  using boost::heap::is_interval_heap;
   using std::priority_queue;
 
-//  Test performance relative to std::priority_queue.
+//  Begin tests
+{
+  priority_deque<int> test_deque;
+//  Sufficient sample size for observing all potential interesting behaviors.
+  for (int i = 0; i < 256; ++i) {
+    try {
+      test_deque.push(i);
+      if (std::find(test_deque.begin(), test_deque.end(), i) == test_deque.end()) {
+        std::cerr << "Element lost <push>.\n";
+        break;
+      }
+      if (!is_interval_heap(test_deque.begin(), test_deque.end(), std::less<int>())) {
+        std::cerr << "Heap corrupted <push>.\n";
+        break;
+      }
+      if (test_deque.maximum() != i)
+        std::cerr << "Incorrect maximum. i = " << i << "\n";
+    } catch (...) {
+      std::cerr << "Exception thrown <push>.\n";
+      break;
+    }
+  }
+  std::vector<int> test_vector;
+  for (int i = 0; i < 256; ++i) {
+    test_vector.push_back(i);
+    std::random_shuffle(test_vector.begin(), test_vector.end());
+    try {
+      test_deque.clear();
+      test_deque.merge(test_vector);
+      if (test_deque.size() != test_vector.size())
+        std::cerr << "Merge changed number of elements.\n";
+      for (int j = 0; j <= i; ++j) {
+        if (std::find(test_deque.begin(), test_deque.end(), j) == test_deque.end()) {
+          std::cerr << "Element removed <merge>.\n";
+          break;
+        }
+      }
+      if (!is_interval_heap(test_deque.begin(), test_deque.end(), std::less<int>())) {
+        std::cerr << "Heap corrupted <merge>.\n";
+        break;
+      }
+    } catch (...) {
+      std::cerr << "Exception thrown <merge>.\n";
+      break;
+    }
+  }
+}
+//  Benchmark performance relative to std::priority_queue.
 #ifdef BENCHMARK
 {
+  typedef intmax_t benchmark_type;
   const unsigned benchmark_elements = 20000000;
   std::cout << "PD: ";
-  benchmark_priority_queue<priority_deque<test_type> >(benchmark_elements);
+  benchmark_priority_queue<priority_deque<benchmark_type> >(benchmark_elements);
   std::cout << "PQ: ";
-  benchmark_priority_queue<priority_queue<test_type> >(benchmark_elements);
+  benchmark_priority_queue<priority_queue<benchmark_type> >(benchmark_elements);
 }
 #endif
 
@@ -110,7 +159,7 @@ int main() {
 
   std::cout << "'set' (" << element_total << "x)\n";
   for (int t = 0; t < element_total; ++t) {
-    pd.set(pd.begin() + rand() % pd.size(), rand());
+    pd.update(pd.begin() + rand() % pd.size(), rand());
 		if (is_valid_until(pd) != pd.end()) {
 		  std::cout << "Failed random-access set (error in replace)\n";
       break;
@@ -145,7 +194,7 @@ int main() {
         case 0: test_pd.pop_maximum(); break;
         case 1: test_pd.pop_minimum(); break;
         case 2: test_pd.erase(test_pd.begin() + rand() % test_pd.size()); break;
-        default: test_pd.set(test_pd.begin() + rand() % test_pd.size(), rand());
+        default: test_pd.update(test_pd.begin() + rand() % test_pd.size(), rand());
       }
     }
     if (is_valid_until(pd) != pd.end()) {

@@ -93,17 +93,19 @@ class priority_deque {
  public:
 //---------------------------------Typedefs------------------------------------|
 //! @details Underlying container type.
-  typedef          Sequence                           container_type;
+  typedef Sequence                                    container_type;
   typedef typename container_type::value_type         value_type;
+  typedef Compare                                     value_compare;
 //! @details STL Container specifies that this is an unsigned integral type.
   typedef typename container_type::size_type          size_type;
 //! @details May be used to examine, but not modify, an element in the deque.
   typedef typename container_type::const_reference    const_reference;
   typedef typename container_type::reference          reference;
   typedef typename container_type::pointer            pointer;
+  typedef pointer                                     const_pointer;
 //! @details May be used to examine, but not modify, elements in the deque.
   typedef typename container_type::const_iterator     const_iterator;
-  typedef typename container_type::iterator           iterator;
+  typedef const_iterator                              iterator;
 //! @details STL Container specifies that this is a signed integral type.
   typedef typename container_type::difference_type    difference_type;
 //-------------------------------Constructors----------------------------------|
@@ -114,15 +116,15 @@ class priority_deque {
 //! @overload
   priority_deque                      (const Compare&, const Sequence&);
 #else
-  explicit priority_deque             (const Compare& comparison =Compare(),
-                                       const Sequence& container =Sequence());
+  explicit priority_deque             (const Compare& =Compare(),
+                                       const Sequence& =Sequence());
 #endif
 //! @brief Constructs a new priority deque from a sequence of elements.
 #if (__cplusplus >= 201103L)
   template <typename InputIterator>
   priority_deque                      (InputIterator first, InputIterator last,
-                                       const Compare& comparison =Compare(),
-                                       Sequence&& container =Sequence());
+                                       const Compare& =Compare(),
+                                       Sequence&& =Sequence());
 //! @overload
   template <typename InputIterator>
   priority_deque                      (InputIterator first, InputIterator last,
@@ -135,13 +137,13 @@ class priority_deque {
 #endif
 //-----------------------------Restricted Access-------------------------------|
 //! @brief Copies an element into the priority deque.
-  void                    push        (const Type& x);
+  void                    push        (const value_type&);
 #if (__cplusplus >= 201103L)
 //!@overload
-  void                    push        (Type&& x);
+  void                    push        (value_type&&);
 //! @brief Emplaces an element into the priority deque.
   template<typename... Args>
-  void                    emplace     (Args&&... args);
+  void                    emplace     (Args&&...);
 #endif
 
 //!@{
@@ -196,39 +198,57 @@ class priority_deque {
 //! @brief Returns a const iterator past the end of the sequence.
   inline const_iterator   end         (void) const  { return sequence_.end(); };
 //! @brief Modifies a specified element of the deque.
-  void                    set         (const_iterator it, const Type& x);
+  void                    update      (const_iterator, const value_type&);
 #if (__cplusplus >= 201103L)
 //!@overload
-  void                    set         (const_iterator it, Type&& x);
+  void                    update      (const_iterator, value_type&&);
 #endif
 //! @brief Removes a specified element from the deque.
-  void                    erase       (const_iterator it);
+  void                    erase       (const_iterator);
 //!@}
+
+//---------------------------Boost.Heap Concepts-------------------------------|
+// size() has constant complexity
+  static const bool constant_time_size    = true;
+// priority deque does not have ordered iterators
+  static const bool has_ordered_iterators = false;
+// priority deque is efficiently mergable
+  static const bool is_mergable           = true;
+// priority deque does not have a stable heap order
+  static const bool is_stable             = false;
+// priority deque does not have a reserve() member
+  static const bool has_reserve           = false;
 
 //--------------------------------Protected------------------------------------|
  protected:
+  inline container_type&        sequence  (void)        { return sequence_; };
+  inline const container_type&  sequence  (void) const  { return sequence_; };
+  inline value_compare&         compare   (void)        { return compare_; };
+  inline const value_compare&   compare   (void) const  { return compare_; };
+//---------------------------------Private-------------------------------------|
+ private:
   Sequence sequence_;
   Compare compare_;
 };
 
 //-------------------------------Constructors----------------------------------|
 //----------------------------Default Constructor------------------------------|
-/** @param comparison Comparison class.
-//  @param sequence Container class.
+/** @param comp Comparison class.
+//  @param seq Container class.
 //  @post Deque contains copies of all elements from @a sequence.
 //
 //  @remark Complexity: O(n)
 */
 template <typename T, typename S, typename C>
-priority_deque<T, S, C>::priority_deque (const C& comparison, const S& sequence)
-  : sequence_(sequence), compare_(comparison)
+priority_deque<T, S, C>::priority_deque (const C& comp, const S& seq)
+  : sequence_(seq), compare_(comp)
 {
   heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
 }
 #if (__cplusplus >= 201103L)
 template <typename T, typename S, typename C>
-priority_deque<T, S, C>::priority_deque (const C& comparison, S&& sequence)
-  : sequence_(std::move(sequence)), compare_(comparison)
+priority_deque<T, S, C>::priority_deque (const C& comp, S&& seq)
+  : sequence_(std::move(seq)), compare_(comp)
 {
   heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
 }
@@ -236,8 +256,8 @@ priority_deque<T, S, C>::priority_deque (const C& comparison, S&& sequence)
 
 //---------------------------Create from Iterators-----------------------------|
 /** @param first,last Range of elements.
-//  @param comparison Instance of comparison class.
-//  @param sequence Instance of container class.
+//  @param comp Instance of comparison class.
+//  @param seq Instance of container class.
 //  @post Deque contains copies of all elements in @a sequence (if specified)
 //  and in the range [ @a first, @a last).
 //
@@ -246,8 +266,9 @@ priority_deque<T, S, C>::priority_deque (const C& comparison, S&& sequence)
 template <typename T, typename S, typename C>
 template <typename InputIterator>
 priority_deque<T, S, C>::priority_deque (InputIterator first,InputIterator last,
-                                         const C& comparison, const S& sequence)
-: sequence_(sequence), compare_(comparison) {
+                                         const C& comp, const S& seq)
+: sequence_(seq), compare_(comp)
+{
   try {
     sequence_.insert(sequence_.end(), first, last);
     heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
@@ -260,8 +281,9 @@ priority_deque<T, S, C>::priority_deque (InputIterator first,InputIterator last,
 template <typename T, typename S, typename C>
 template <typename InputIterator>
 priority_deque<T, S, C>::priority_deque (InputIterator first,InputIterator last,
-                                         const C& comparison, S&& sequence)
-: sequence_(std::move(sequence)), compare_(comparison) {
+                                         const C& comp, S&& seq)
+: sequence_(std::move(seq)), compare_(comp)
+{
   try {
     sequence_.insert(sequence_.end(), first, last);
     heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
@@ -274,14 +296,14 @@ priority_deque<T, S, C>::priority_deque (InputIterator first,InputIterator last,
 
 //-----------------------------Restricted Access-------------------------------|
 //------------------------------Insert / Emplace-------------------------------|
-/** @param  x Element to add the the priority deque.
-//  @post Priority deque contains a copy of @a x.
-//  @post Indices and references are invalidated.
+/** @param  value Element to add the the priority deque.
+//  @post Priority deque contains @a value or a copy of @a value.
+//  @post All iterators and references are invalidated.
 //
 //  @remark Complexity: O(log n)
 */
 template <typename T, typename Sequence, typename Compare>
-void priority_deque<T, Sequence, Compare>::push (const T& value) {
+void priority_deque<T, Sequence, Compare>::push (const value_type& value) {
   try {
     sequence_.push_back(value);
   } catch (...) {
@@ -292,7 +314,7 @@ void priority_deque<T, Sequence, Compare>::push (const T& value) {
 }
 #if (__cplusplus >= 201103L)
 template <typename T, typename Sequence, typename Compare>
-void priority_deque<T, Sequence, Compare>::push (T&& value) {
+void priority_deque<T, Sequence, Compare>::push (value_type&& value) {
   try {
     sequence_.push_back(std::move(value));
   } catch (...) {
@@ -348,7 +370,7 @@ typename priority_deque<T, Sequence, Compare>::const_reference
 //---------------------------Remove Maximum/Minimum----------------------------|
 /** @pre  Priority deque contains one or more elements.
 //  @post A maximal element has been removed from the priority deque.
-//  @post Indices and references are invalidated.
+//  @post All iterators and references are invalidated.
 //  @see  maximum, pop, pop_minimum
 //
 //  @remark Complexity: O(log n)
@@ -368,7 +390,7 @@ void priority_deque<T, Sequence, Compare>::pop_minimum (void) {
 }
 /** @pre  Priority deque contains one or more elements.
 //  @post A minimal element has been removed from the priority deque.
-//  @post Indices and references are invalidated.
+//  @post All iterators and references are invalidated.
 //  @see  minimum, pop_maximum
 //
 //  @remark Complexity: O(log n)
@@ -389,10 +411,10 @@ void priority_deque<T, Sequence, Compare>::pop_maximum (void) {
 
 //--------------------------Whole-Deque Operations-----------------------------|
 //-----------------------------------Merge-------------------------------------|
-/** @param first, last Input iterators bounding the range [ @a first, @a last)
+/** @param first,last Input iterators bounding the range [ @a first, @a last)
 //  @post Priority deque contains its original elements, and copies of those in
 //  the range.
-//  @post Indices and references are invalidated.
+//  @post All iterators and references are invalidated.
 //
 //  @remark Complexity: O(n)
 //  @remark Exception safety: Basic.
@@ -413,7 +435,7 @@ void priority_deque<T, S, C>::merge (InputIterator first, InputIterator last) {
 /** @param other Priority deque with which to swap.
 //  @post Deque contains the elements from @a source, and @a source contains the
 //  elements from this deque.
-//  @post Indices and references are invalidated.
+//  @post All iterators and references are invalidated.
 //  @note Sequence containers are required to have swap functions.
 //  @remark Complexity: O(1)
 */
@@ -426,6 +448,7 @@ inline void priority_deque<T, S, C>::swap (priority_deque<T, S, C>& other) {
 //  @param deque1,deque2 Priority deques.
 //  @post @a deque1 contains the elements originally in @a deque2, and @a deque2
 //  contains the elements originally in @a deque1
+//  @post All iterators and references are invalidated.
 //
 //  @remark Complexity: O(1)
 */
@@ -437,12 +460,11 @@ inline void swap (priority_deque<T, S, C>& deque1,
 }
 
 //---------------------------Random-Access Mutators----------------------------|
-/** @param  index An index in the range [0, size)
-//  @param  x The new value.
+/** @param  random_it A valid iterator in the range [begin, end).
+//  @param  value The new value.
 //  @pre  Priority deque contains one or more elements.
-//  @pre  @a index must be in the range [0, size)
-//  @post The element at @a index is set to @a x.
-//  @post Indices and references are invalidated.
+//  @post The element at @a random_it is set to @a value.
+//  @post All iterators and references are invalidated.
 //  @see erase
 //
 //  Elements within the deque may be unordered.
@@ -451,37 +473,40 @@ inline void swap (priority_deque<T, S, C>& deque1,
 //  corrupt the heap.
 */
 template <typename T, typename S, typename C>
-void priority_deque<T, S, C>::set (const_iterator it, const T& replacement) {
-  const difference_type index = it - begin();
+void priority_deque<T, S, C>::update (const_iterator random_it,
+                                      const value_type& value)
+{
+  const difference_type index = random_it - begin();
   BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT((0 <= index) &&
     (index < end() - begin()), "Iterator out of bounds; can't set element.");
 //  Providing the strong guarantee would require saving a copy.
-  *(sequence_.begin() + index) = replacement;
-  heap::sift_interval_heap(sequence_.begin(),sequence_.end(),index,compare_);
+  *(sequence_.begin() + index) = value;
+  heap::update_interval_heap(sequence_.begin(),sequence_.end(),index,compare_);
 }
 #if (__cplusplus >= 201103L)
 template <typename T, typename S, typename C>
-void priority_deque<T, S, C>::set (const_iterator it, T&& replacement) {
-  const difference_type index = it - begin();
+void priority_deque<T, S, C>::update (const_iterator random_it,
+                                      value_type&& value)
+{
+  const difference_type index = random_it - begin();
   BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT((0 <= index) &&
     (index < end() - begin()), "Iterator out of bounds; can't set element.");
 //  Providing the strong guarantee would require saving a copy.
-  *(sequence_.begin() + index) = std::move(replacement);
-  heap::sift_interval_heap(sequence_.begin(),sequence_.end(),index,compare_);
+  *(sequence_.begin() + index) = std::move(value);
+  heap::update_interval_heap(sequence_.begin(),sequence_.end(),index,compare_);
 }
 #endif
 
-/** @param  index  An index in the range [0, size)
+/** @param  random_it  An iterator in the range [begin, end)
 //  @pre  Priority deque contains one or more elements.
-//  @pre  @a index must be in the range [0, size)
-//  @post The deque no longer contains the element previously at @a index.
-//  @post Indices and references are invalidated.
+//  @post The deque no longer contains the element previously at @a random_it.
+//  @post All iterators and references are invalidated.
 //  @see set
 //  @remark Complexity: O(log n)
 */
 template <typename T, typename Sequence, typename Compare>
-void priority_deque<T, Sequence, Compare>::erase (const_iterator it) {
-  const difference_type index = it - begin();
+void priority_deque<T, Sequence, Compare>::erase (const_iterator random_it) {
+  const difference_type index = random_it - begin();
   BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT((0 <= index) &&
     (index < end() - begin()), "Iterator out of bounds; can't erase element.");
   heap::pop_interval_heap(sequence_.begin(), sequence_.end(),index,compare_);
