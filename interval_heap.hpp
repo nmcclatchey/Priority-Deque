@@ -332,14 +332,18 @@ bool is_interval_heap (Iterator first, Iterator last, Compare compare) {
 }
 
 #if (BOOST_HEAP_INTERVAL_HEAP_USE_STD_THREAD == true)
-//! @brief Internal function for threaded bulk-load.
 namespace interval_heap_internal {
+//! @brief Minimum number of elements in heap layer before threads branch.
+static constexpr int kBranchMin = 1 << 10;
+//! @brief Minimum number of elements in heap before threading is considered.
+static constexpr int kThreadMin = kBranchMin << 1;
 /*    This parallel version of the heap-maker uses divide-and-conquer methods to
 //  distribute the task amongst the cores.
 */
+//! @brief Internal function for threaded bulk-load.
 template <typename Iterator, typename Compare, typename Offset>
 void make_block (Iterator first, Iterator last, Compare compare,
-                                 Offset block_begin, Offset block_end, int threads) {
+                 Offset block_begin, Offset block_end, int threads) {
   using namespace std;
   using interval_heap_internal::sift_down;
 
@@ -350,16 +354,20 @@ void make_block (Iterator first, Iterator last, Compare compare,
 /*    Recurse. If reasonable, pass half the task to another thread. Don't split
 //  if chunks are tiny. Page updates will cause thrashing.
 */
-    if ((threads > 1) && (block_end - block_begin >= 1024)) {
-      threads >>= 1;
-      Offset child_middle = block_end + block_begin + 2;
+    const Offset child_begin    = (block_begin + 1) * 2;
+    const Offset child_end      = (block_end + 1) * 2;
+
+    if ((threads > 1) && (block_end - block_begin >= kBranchMin)) {
+      const Offset child_middle = block_end + block_begin + 2;
 //  Branch.
+      int split_threads = threads >> 1;
       thread thread_branch(&make_block<Iterator,Compare,Offset>, first, last,
-                           compare, child_middle, (block_end + 1) * 2, threads);
-      make_block(first, last, compare, (block_begin + 1) * 2, child_middle, threads);
+                           compare, child_middle, child_end, split_threads);
+      make_block(first, last, compare, child_begin, child_middle,
+                 threads - split_threads);
       thread_branch.join();
     } else
-      make_block(first, last, compare, (block_begin + 1) * 2, (block_end + 1) * 2, threads);
+      make_block(first, last, compare, child_begin, child_end, threads);
   } else
     if (block_end > index_end)
 //  If the final interval is a singleton, it's already OK. Skip it.
@@ -400,8 +408,11 @@ void make_interval_heap (Iterator first, Iterator last, Compare compare) {
 //  Double-heap property holds vacuously.
   if (last - first < 2)
     return;
-  int threads = ((last - first) > (1 << 12)) ? std::thread::hardware_concurrency() : 1;
-  interval_heap_internal::make_block<Iterator, Compare, Offset>(first, last, compare, 0, 2, threads);
+  int threads = ((last - first) > interval_heap_internal::kThreadMin) ?
+                std::thread::hardware_concurrency() : 1;
+  interval_heap_internal::make_block<Iterator, Compare, Offset>(first, last,
+                                                                compare, 0, 2,
+                                                                threads);
 }
 #else //  Thread-free version, for compilers that don't support std::thread
 template <typename Iterator, typename Compare>
@@ -439,7 +450,7 @@ void make_interval_heap (Iterator first, Iterator last, Compare compare) {
 namespace interval_heap_internal {
 //! @remark Exception safety: Strong if move/swap doesn't throw.
 template <bool left_bound, typename Iterator, typename Offset, typename Compare>
-void sift_up (Iterator first, Offset origin, Compare compare, Offset limit_child)
+void sift_up (Iterator first, Offset origin, Compare compare,Offset limit_child)
 {
 //  Use the most specialized available functions.
   using namespace std;
@@ -487,6 +498,7 @@ void sift_up (Iterator first, Offset origin, Compare compare, Offset limit_child
 }
 
 //! @remark Exception safety: As strong as sift_up.
+//! @pre @a index refers to a leaf node of the heap.
 template <typename Iterator, typename Offset, typename Compare>
 void sift_leaf_max (Iterator first, Iterator last, Offset index,
                     Compare compare, Offset limit_child)
@@ -497,7 +509,6 @@ void sift_leaf_max (Iterator first, Iterator last, Offset index,
 
 
 //  Index of corresponding left-bound (min) element
-  //const Offset co_index = (index * 2 < index_end) ? (index * 2) : (index ^ 1);
   const Offset co_index = ((index_end - 1) / 2 < index)
                             ? (index ^ 1) : (index * 2);
   if (compare(*(first + index), *(first + co_index))) {
@@ -515,6 +526,7 @@ void sift_leaf_max (Iterator first, Iterator last, Offset index,
 }
 
 //! @remark Exception safety: As strong as sift_up.
+//! @pre @a index refers to a leaf node of the heap.
 template <typename Iterator, typename Offset, typename Compare>
 void sift_leaf_min (Iterator first, Iterator last, Offset index,
                     Compare compare, Offset limit_child)
@@ -542,7 +554,7 @@ void sift_leaf_min (Iterator first, Iterator last, Offset index,
       throw;  //  Re-throw the current exception.
     }
   } else
-    sift_up<true, Iterator, Offset, Compare>(first, index, compare, limit_child);
+    sift_up<true, Iterator, Offset, Compare>(first, index, compare,limit_child);
 }
 
 //! @remark Exception safety: As strong as sift_up.
@@ -595,7 +607,7 @@ void sift_down (Iterator first, Iterator last, Offset origin, Compare compare,
 //  Calculating this outside the if-statement simplifies exception-handling.
           bool swap_required;
           try {
-            swap_required = compare(*(first + child), *(first + child + 1));
+            swap_required = compare(*(first + child), *(first + (child + 1)));
           } catch (...) {
 //  Pull the moving element out of limbo.
 #if (__cplusplus >= 201103L)

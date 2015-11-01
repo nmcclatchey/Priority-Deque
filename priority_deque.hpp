@@ -623,14 +623,14 @@ template <typename T, typename S, typename C>
 void priority_deque<T, S, C>::update (const_iterator random_it,
                                       const value_type& value)
 {
-  const difference_type index = random_it - begin();
-  BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT((0 <= index) &&
-    (index < end() - begin()), "Iterator out of bounds; can't set element.");
+  const difference_type ind = random_it - begin();
+  BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT((0 <= ind) &&
+    (ind < end() - begin()), "Iterator out of bounds; can't set element.");
 //  Providing the strong guarantee would require saving a copy.
   lock();
   try {
-    *(sequence_.begin() + index) = value;
-    heap::update_interval_heap(sequence_.begin(),sequence_.end(),index,compare_);
+    *(sequence_.begin() + ind) = value;
+    heap::update_interval_heap(sequence_.begin(),sequence_.end(),ind,compare_);
   } catch (...) {
     unlock();
     throw;  //  Re-throw the current exception.
@@ -642,14 +642,14 @@ template <typename T, typename S, typename C>
 void priority_deque<T, S, C>::update (const_iterator random_it,
                                       value_type&& value)
 {
-  const difference_type index = random_it - begin();
-  BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT((0 <= index) &&
-    (index < end() - begin()), "Iterator out of bounds; can't set element.");
+  const difference_type ind = random_it - begin();
+  BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT((0 <= ind) &&
+    (ind < end() - begin()), "Iterator out of bounds; can't set element.");
 //  Providing the strong guarantee would require saving a copy.
   lock();
   try {
-    *(sequence_.begin() + index) = std::move(value);
-    heap::update_interval_heap(sequence_.begin(),sequence_.end(),index,compare_);
+    *(sequence_.begin() + ind) = std::move(value);
+    heap::update_interval_heap(sequence_.begin(),sequence_.end(),ind,compare_);
   } catch (...) {
     unlock();
     throw;  //  Re-throw the current exception.
@@ -666,7 +666,7 @@ void priority_deque<T, Sequence, Compare>::erase (const_iterator random_it) {
   lock();
   try {
 //  Move the element pointed to by random_it to the end of the sequence.
-    heap::pop_interval_heap(sequence_.begin(), sequence_.end(), index, compare_);
+    heap::pop_interval_heap(sequence_.begin(), sequence_.end(), index,compare_);
   } catch (...) {
     unlock();
     throw;  //  Re-throw the current exception.
