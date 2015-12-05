@@ -26,7 +26,6 @@
 //  @note Thread safety: Simultaneous read-write or write-write operations are
 //  unsafe.
 */
-
 #ifndef BOOST_HEAP_INTERVAL_HEAP_HPP_
 #define BOOST_HEAP_INTERVAL_HEAP_HPP_
 
@@ -95,6 +94,26 @@ bool is_interval_heap (Iterator first, Iterator last, Compare compare);
 
 //-------------------------------Book-Keeping-----------------------------------
 namespace interval_heap_internal {
+#if (BOOST_HEAP_INTERVAL_HEAP_USE_STD_THREAD == true)
+/*! @brief Minimum number of elements in heap layer before threads branch. Can
+//  be used to reduce page thrashing, but not usually required. The threaded
+//  bulk-loading operation has very good locality of reference, and very few
+//  operations are performed near the top of the heap.
+*/
+static constexpr int kBranchMin = 0;//;//1 << 2;//12;
+//! @brief Minimum number of elements in heap before threading is considered.
+static constexpr int kThreadMin = 1 << 5;
+/*    This parallel version of the heap-maker uses divide-and-conquer methods to
+//  distribute the task amongst the cores.
+*/
+//! @brief Internal function for threaded bulk-load.
+template <typename Iterator, typename Compare, typename Offset>
+void make_block (Iterator, Iterator, Compare, Offset, Offset, unsigned int);
+#endif
+//! @brief Internal function for single-threaded bulk-load.
+template <typename Iterator, typename Compare>
+void make_full (Iterator first, Iterator last, Compare compare);
+
 //! @brief Restores the interval-heap property if one leaf element violates it.
 template <typename Iterator, typename Compare>
 void sift_leaf (Iterator first, Iterator last,
@@ -331,19 +350,44 @@ bool is_interval_heap (Iterator first, Iterator last, Compare compare) {
   }
 }
 
+/*! @details This function moves elements in a range to from an interval-heap.
+//  @param first,last A range of random-access iterators.
+//  @param compare A comparison object.
+//  @post [ @a first, @a last) is a valid interval heap.
+//  @invariant No element is added to or removed from the range.
+//  @note Complexity: O(n)
+//  @note Exception safety: Basic if move/copy/swap provide the basic
+//  guarantee.
+//  @remark Threaded.
+*/
+template <typename Iterator, typename Compare>
+void make_interval_heap (Iterator first, Iterator last, Compare compare) {
+  using namespace interval_heap_internal;
+//  Double-heap property holds vacuously.
+  if (last - first < 2)
+    return;
 #if (BOOST_HEAP_INTERVAL_HEAP_USE_STD_THREAD == true)
+  typedef typename std::iterator_traits<Iterator>::difference_type Offset;
+  unsigned int threads = ((last - first) > kThreadMin)?
+                std::thread::hardware_concurrency() : 1;
+  if (threads > 1)
+    make_block<Iterator, Compare, Offset>(first, last, compare, 0, 2, threads);
+  else
+    make_full<Iterator, Compare>(first, last, compare);
+#else
+  make_full<Iterator, Compare>(first, last, compare);
+#endif
+}
+
 namespace interval_heap_internal {
-//! @brief Minimum number of elements in heap layer before threads branch.
-static constexpr int kBranchMin = 1 << 10;
-//! @brief Minimum number of elements in heap before threading is considered.
-static constexpr int kThreadMin = kBranchMin << 1;
+#if (BOOST_HEAP_INTERVAL_HEAP_USE_STD_THREAD == true)
 /*    This parallel version of the heap-maker uses divide-and-conquer methods to
 //  distribute the task amongst the cores.
 */
 //! @brief Internal function for threaded bulk-load.
 template <typename Iterator, typename Compare, typename Offset>
 void make_block (Iterator first, Iterator last, Compare compare,
-                 Offset block_begin, Offset block_end, int threads) {
+                 Offset block_begin, Offset block_end, unsigned int threads) {
   using namespace std;
   using interval_heap_internal::sift_down;
 
@@ -360,15 +404,35 @@ void make_block (Iterator first, Iterator last, Compare compare,
     if ((threads > 1) && (block_end - block_begin >= kBranchMin)) {
       const Offset child_middle = block_end + block_begin + 2;
 //  Branch.
-      int split_threads = threads >> 1;
+      unsigned int split_threads = threads >> 1;
       thread thread_branch(&make_block<Iterator,Compare,Offset>, first, last,
                            compare, child_middle, child_end, split_threads);
+      //make_block(first, last, compare, child_middle, child_end, split_threads);
       make_block(first, last, compare, child_begin, child_middle,
                  threads - split_threads);
       thread_branch.join();
+      //std::cerr << "Split at: " << child_middle << "\n";
     } else
       make_block(first, last, compare, child_begin, child_end, threads);
-  } else
+/*    Make this layer of the interval heap; we assume that all lower layers are
+//  already OK.
+*/
+    for (Offset index = block_end; (index > block_begin);) {
+      const Offset coindex = --index; //  = index + 1
+      --index;
+//  If compare throws, heap property cannot be verified or enforced.
+//  If swap throws, heap property is violated and cannot be enforced.
+      if (compare(*(first + coindex), *(first + index)))
+        swap(*(first + coindex), *(first + index));
+
+      //const Offset stop = (index <= end_parent) ? (coindex * 2) : index_end;
+      const Offset stop = coindex * 2;
+      sift_down<false, Iterator, Offset, Compare>(first, last, coindex,
+                                                  compare, stop);
+      sift_down<true , Iterator, Offset, Compare>(first, last, index,
+                                                  compare, stop);
+    }
+  } else {
     if (block_end > index_end)
 //  If the final interval is a singleton, it's already OK. Skip it.
       block_end = index_end ^ (index_end & 1);
@@ -376,78 +440,64 @@ void make_block (Iterator first, Iterator last, Compare compare,
 /*    Make this layer of the interval heap; we assume that all lower layers are
 //  already OK.
 */
-  for (Offset index = block_end - 2; (index >= block_begin); index -= 2) {
-    const Offset coindex = index | 1; //  = index + 1
-    const Offset stop = (index <= end_parent) ? (coindex * 2) : index_end;
+    for (Offset index = block_end - 2; (index > block_begin); index -= 2) {
+      const Offset coindex = index | 1; //  = index + 1
 //  If compare throws, heap property cannot be verified or enforced.
 //  If swap throws, heap property is violated and cannot be enforced.
-    if (compare(*(first + coindex), *(first + index)))
-      swap(*(first + coindex), *(first + index));
+      if (compare(*(first + coindex), *(first + index)))
+        swap(*(first + coindex), *(first + index));
+    }
+    const Offset coindex = block_begin | 1;
+    if (coindex < block_end) {
+//  If compare throws, heap property cannot be verified or enforced.
+//  If swap throws, heap property is violated and cannot be enforced.
+      if (compare(*(first + coindex), *(first + block_begin)))
+        swap(*(first + coindex), *(first + block_begin));
 
-    sift_down<false, Iterator, Offset, Compare>(first, last, coindex,
-                                                compare, stop);
-    sift_down<true , Iterator, Offset, Compare>(first, last, index,
-                                                compare, stop);
+      const Offset stop = (block_begin <= end_parent) ? (coindex * 2) : index_end;
+      sift_down<false, Iterator, Offset, Compare>(first, last, coindex,
+                                                  compare, stop);
+      sift_down<true , Iterator, Offset, Compare>(first, last, block_begin,
+                                                  compare, stop);
+    }
   }
 }
-}
+#endif
 
-/*! @details This function moves elements in a range to from an interval-heap.
-//  @param first,last A range of random-access iterators.
-//  @param compare A comparison object.
-//  @post [ @a first, @a last) is a valid interval heap.
-//  @invariant No element is added to or removed from the range.
-//  @note Complexity: O(n)
-//  @note Exception safety: Basic if move/copy/swap provide the basic
-//  guarantee.
-//  @remark Threaded.
-*/
 template <typename Iterator, typename Compare>
-void make_interval_heap (Iterator first, Iterator last, Compare compare) {
-  typedef typename std::iterator_traits<Iterator>::difference_type Offset;
-//  Double-heap property holds vacuously.
-  if (last - first < 2)
-    return;
-  int threads = ((last - first) > interval_heap_internal::kThreadMin) ?
-                std::thread::hardware_concurrency() : 1;
-  interval_heap_internal::make_block<Iterator, Compare, Offset>(first, last,
-                                                                compare, 0, 2,
-                                                                threads);
-}
-#else //  Thread-free version, for compilers that don't support std::thread
-template <typename Iterator, typename Compare>
-void make_interval_heap (Iterator first, Iterator last, Compare compare) {
+void make_full (Iterator first, Iterator last, Compare compare) {
   using namespace std;
   using interval_heap_internal::sift_down;
   typedef typename iterator_traits<Iterator>::difference_type Offset;
 
+//  Not less than 2.
   const Offset index_end = last - first;
-//  Double-heap property holds vacuously.
-  if (index_end <= 1)
-    return;
 //  Prevents overflow when number of elements approaches maximum possible index.
   const Offset end_parent = index_end / 2 - 1;
 //  If the final interval is a singleton, it's already OK. Skip it.
-  Offset index = index_end ^ (index_end & 1);
-  do {
-    index -= 2;
+  Offset index = (index_end ^ (index_end & 1)) - 2;
+//  Make all leaf nodes.
+  while (index > end_parent) {
     const Offset coindex = index | 1; //  = index + 1
-    const Offset stop = (index <= end_parent) ? (coindex * 2) : index_end;
-//  If compare throws, heap property cannot be verified or enforced.
-//  If swap throws, heap property is violated and cannot be enforced.
+    if (compare(*(first + coindex), *(first + index)))
+      swap(*(first + coindex), *(first + index));
+    index -= 2;
+  }
+  index += 2;
+  do {
+    const Offset coindex = --index; //  = index + 1
+    --index;
     if (compare(*(first + coindex), *(first + index)))
       swap(*(first + coindex), *(first + index));
 
+    const Offset stop = coindex * 2;
     sift_down<false, Iterator, Offset, Compare>(first, last, coindex,
                                                compare, stop);
     sift_down<true , Iterator, Offset, Compare>(first, last, index,
                                                compare, stop);
-
   } while (index >= 2);
 }
-#endif
 
-namespace interval_heap_internal {
 //! @remark Exception safety: Strong if move/swap doesn't throw.
 template <bool left_bound, typename Iterator, typename Offset, typename Compare>
 void sift_up (Iterator first, Offset origin, Compare compare,Offset limit_child)
@@ -602,12 +652,13 @@ void sift_down (Iterator first, Iterator last, Offset origin, Compare compare,
     if (index <= end_parent + (left_bound ? 0 : 1)) {
       Offset child = index * 2 + (left_bound ? 2 : 1);
       if (child < index_end) {
+        const Offset cochild = child + 1;
 //  Need to treat singletons (child + 1) as both upper and lower bounds.
-        if (!left_bound && (child + 1 < index_end)) {
+        if (!left_bound && (cochild != index_end)) {
 //  Calculating this outside the if-statement simplifies exception-handling.
           bool swap_required;
           try {
-            swap_required = compare(*(first + child), *(first + (child + 1)));
+            swap_required = compare(*(first + child), *(first + cochild));
           } catch (...) {
 //  Pull the moving element out of limbo.
 #if (__cplusplus >= 201103L)
@@ -616,14 +667,14 @@ void sift_down (Iterator first, Iterator last, Offset origin, Compare compare,
             throw;  //  Re-throw the current exception.
           }
           if (swap_required) {
-            ++child;
+            //++child;
 #if (__cplusplus >= 201103L)  //  C++11
-            *(first + index) = std::move_if_noexcept(*(first + child));
-            *(first + child) = std::move_if_noexcept(limbo);
+            *(first + index) = std::move_if_noexcept(*(first + cochild));
+            *(first + cochild) = std::move_if_noexcept(limbo);
 #else
-            swap(*(first + index), *(first + child));
+            swap(*(first + index), *(first + cochild));
 #endif
-            index = child;  //  Important for the rollback.
+            index = cochild;  //  Important for the rollback.
             sift_leaf_min<Iterator, Offset, Compare>(first, last, index,
                                                      compare, limit_child);
             return;
