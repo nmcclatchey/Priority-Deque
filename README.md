@@ -27,5 +27,5 @@ Goals:
   * The random-access update operation can only provide this guarantee by copying an element or using move semantics.
 * Provide thread safety, if possible.
   * Status: Complete.
-  * Functions have no side-effects besides the obvious (stack or heap may be altered), and can safely be called in threads, though a single queue should not be accessed by multiple threads simultaneously. Multiple reads are okay; simultaneous read-write and write-write may cause race conditions.
+  * Functions have no side-effects besides the obvious (deque or interval heap may be altered), and can safely be called in threads, though a single queue should not be accessed by multiple threads simultaneously. Multiple reads are okay; simultaneous read-write and write-write may cause race conditions.
   * Automatic locking via mutex crippled performance, and has been removed.
