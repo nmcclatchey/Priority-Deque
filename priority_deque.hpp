@@ -4,19 +4,17 @@
 | at http://www.boost.org/LICENSE_1_0.txt                                      |
 \*----------------------------------------------------------------------------*/
 
-/*! @file priority_deque.hpp
-//    priority_deque.hpp provides the class priority_deque as a thin wrapper
-//  around the functions provided by interval_heap.hpp.
-//  @note Thread safety: No static variables are modified by any operation.
-//  @note Thread safety: Simultaneous read operations are safe.
-//  @note Thread safety: Simultaneous read-write or write-write operations are
-//  unsafe. Reading while writing may give incorrect output, but will not
-//  corrupt the deque.
-//  @note Exception safety: If the means of movement -- move, copy, or swap,
-//  depending on exception specifications -- does not throw, the guarantee is as
-//  strong as that of the action on the underlying container. (Unless otherwise
-//  specified). Providing a stronger guarantee is impractical.
-*/
+/// @file priority_deque.hpp
+/// @brief priority_deque.hpp provides the class priority_deque as a thin
+///   wrapper around the functions provided by interval_heap.hpp.
+/// @note Thread safety: No static variables are modified by any operation.
+/// @note Thread safety: Simultaneous read operations are safe.
+/// @note Thread safety: Simultaneous read-write or write-write operations are
+///   unsafe. Reading while writing causes undefined behavior.
+/// @note Exception safety: If the means of movement -- move, copy, or swap,
+///   depending on exception specifications -- does not throw, the guarantee is
+///   as strong as that of the action on the underlying container, unless
+///   otherwise specified. Providing a stronger guarantee is impractical.
 
 #ifndef BOOST_CONTAINER_PRIORITY_DEQUE_HPP_
 #define BOOST_CONTAINER_PRIORITY_DEQUE_HPP_
@@ -52,64 +50,47 @@
 
 namespace boost {
 namespace container {
-//! @brief Efficient double-ended priority queue.
-template <typename Type, typename Sequence =std::vector<Type>,
-          typename Compare =::std::less<typename Sequence::value_type> >
-class priority_deque;
-
-/** @brief Swaps the elements of two priority deques.
-// @relates priority_deque
-//  @param deque1,deque2 Priority deques.
-//  @post @a deque1 contains the elements originally in @a deque2, and @a deque2
-//  contains the elements originally in @a deque1
-//  @post All iterators and references are invalidated.
-//
-//  @note Complexity: O(1)
-//  @note Exception safety: No-throw.
-*/
-template <typename Type, typename Sequence, typename Compare>
-void swap (priority_deque<Type, Sequence, Compare>& deque1,
-           priority_deque<Type, Sequence, Compare>& deque2);
-
 //----------------------------Priority Deque Class-----------------------------|
-/*! @brief Efficient double-ended priority queue.
- *  @author Nathaniel McClatchey
- *  @copyright Boost Software License Version 1.0
- *  @param Type Type of elements in the priority deque.
- *  @param Sequence Underlying sequence container. Must provide random-access
- *  iterators, %front(), %push_back(Type const &), and %pop_back().
- *  Defaults to std::vector<Type>.
- *  @param Compare Comparison class. %Compare(A, B) should return true if %A
- *  should be placed earlier than %B in a strict weak ordering.
- *  Defaults to std::less<Type>, which encapsulates operator<.
- *  @details Priority deques are adaptors, designed to provide efficient
- *  insertion and access to both ends of a weakly-ordered list of elements.
- *  As a container adaptor, priority_deque is implemented on top of another
- *  container type. By default, this is std::vector, but a different container
- *  may be specified explicitly.
- *  Although the priority deque does permit iteration through its elements,
- *  there is no ordering guaranteed, as different implementations may benefit
- *  from different structures, and all iterators should be discarded after using
- *  any function not labeled const.
- *  @note %priority_deque does not provide a stable ordering. If both A<B and
- *  B<A are false, then the order in which they appear may differ from the order
- *  in which they were added to the priority deque.
- *  @note Complexity may depend on the underlying container.
- *  @note Exception safety may depend on the underlying container and value
- *  type. Ensure that Type may be safely moved to benefit from strong exception
- *  safety guarantees.
- *  @remark %priority_deque replicates the interface of the STL
- *  @a priority_queue class template.
- *  @remark %priority_deque is most useful when removals are interspersed with
- *  insertions. If no further insertions are to be performed after the first
- *  removal, consider using an array and a sorting algorithm instead.
- *  @remark %priority_deque structures elements as they are added, removed, and
- *  modified by its member functions. If the elements are modified by some means
- *  other than the public member functions, the order must be restored before
- *  the priority_deque is used.
- *  @see priority_queue
- */
-template <typename Type, typename Sequence, typename Compare>
+/// @brief Efficient double-ended priority queue.
+/// @author Nathaniel McClatchey
+/// @copyright Boost Software License Version 1.0
+/// @tparam Type Type of elements in the priority deque.
+/// @tparam Sequence Underlying sequence container. Must provide random-access
+///   iterators, %front(), %push_back(Type const &), and %pop_back().
+///   Defaults to std::vector<Type>.
+/// @tparam Compare Comparison class. %Compare(A, B) should return true if %A
+///   should be placed earlier than %B in a strict weak ordering.
+///   Defaults to std::less<Type>, which encapsulates operator<.
+/// @details Priority deques are adaptors, designed to provide efficient
+///   insertion and access to both ends of a weakly-ordered list of elements.
+///   As a container adaptor, priority_deque is implemented on top of another
+///   container type. By default, this is std::vector, but a different container
+///   may be specified explicitly.
+///   Although the priority deque does permit iteration through its elements,
+///   there is no ordering guaranteed, as different implementations may benefit
+///   from different structures, and all iterators should be discarded after
+///   using any non-const function.
+/// @note %priority_deque does not provide a stable ordering. If both A<B and
+///   B<A are false, then the order in which they appear may differ from the
+///   order in which they were added to the priority deque.
+/// @note Complexity may depend on the underlying container.
+/// @note Exception safety may depend on the underlying container and value
+///   type. Ensure that Type may be safely moved to benefit from strong
+///   exception safety guarantees.
+/// @remark %priority_deque replicates the interface of the STL
+///   @a priority_queue class template.
+/// @remark %priority_deque is most useful when removals are interspersed with
+///   insertions. If no further insertions are to be performed after the first
+///   removal, consider using an array and a sorting algorithm instead.
+/// @remark %priority_deque structures elements as they are added, removed, and
+///   modified by its member functions. If the elements are modified by some
+///   means other than the public member functions, such as the protected direct
+///   access functions, the interval heap property must be restored before the
+///   <tt>priority_deque</tt> is used.
+/// @see priority_queue
+template <typename Type,
+          typename Sequence = std::vector<Type>,
+          typename Compare =  ::std::less<typename Sequence::value_type> >
 class priority_deque {
 //----------------------------------Public-------------------------------------|
  public:
@@ -131,14 +112,13 @@ class priority_deque {
 //! @details STL Container specifies that this is a signed integral type.
   typedef typename container_type::difference_type    difference_type;
 //-------------------------------Constructors----------------------------------|
-/** @brief Constructs a new priority deque.
-//  @param comp Instance of comparison class.
-//  @param seq Instance of container class.
-//  @post Deque contains copies of all elements from @a sequence.
-//
-//  @note Complexity: O(n)
-//  @note Exception safety: None. As strong as make_interval_heap
-*/
+/// @brief Constructs a new priority deque.
+/// @param comp Instance of comparison class.
+/// @param seq Instance of container class.
+/// @post Deque contains copies of all elements from @a sequence.
+///
+/// @note Complexity: O(n)
+/// @note Exception safety: None.
 #if (__cplusplus >= 201103L)
   explicit priority_deque             (const Compare& =Compare(),
                                        Sequence&& =Sequence());
@@ -148,16 +128,15 @@ class priority_deque {
   explicit priority_deque             (const Compare& =Compare(),
                                        const Sequence& =Sequence());
 #endif
-/** @brief Constructs a new priority deque from a sequence of elements.
-//  @param first,last Range of elements.
-//  @param comp Instance of comparison class.
-//  @param seq Instance of container class.
-//  @post Deque contains copies of all elements in @a sequence (if specified)
-//  and in the range [ @a first, @a last).
-//
-//  @note Complexity: O(n)
-//  @note Exception safety: None. As strong as make_interval_heap
-*/
+/// @brief Constructs a new priority deque from a sequence of elements.
+/// @param first,last Range of elements.
+/// @param comp Instance of comparison class.
+/// @param seq Instance of container class.
+/// @post Deque contains copies of all elements in @a sequence (if specified)
+///   and in the range [ @a first, @a last).
+///
+/// @note Complexity: O(n)
+/// @note Exception safety: None.
 #if (__cplusplus >= 201103L)
   template <typename InputIterator>
   priority_deque                      (InputIterator first, InputIterator last,
@@ -174,92 +153,85 @@ class priority_deque {
                                        const Sequence& =Sequence());
 #endif
 //-----------------------------Restricted Access-------------------------------|
-/** @brief Copies an element into the priority deque.
-//  @param value Element to insert into the priority deque.
-//  @post Priority deque contains @a value or a copy of @a value.
-//  @post All iterators and references are invalidated.
-//
-//  @note Complexity: O(log n)
-//  @note Exception safety: Strong
-*/
+/// @brief Copies an element into the priority deque.
+/// @param value Element to insert into the priority deque.
+/// @post Priority deque contains @a value or a copy of @a value.
+/// @post All iterators and references are invalidated.
+///
+/// @note Complexity: O(log n)
+/// @note Exception safety: Strong
   void                    push        (const value_type&);
 #if (__cplusplus >= 201103L)
 //!@overload
   void                    push        (value_type&&);
 
-/** @brief Emplaces an element into the priority deque.
-//  @param  args Arguments for the element to create in the the priority deque.
-//  @post Priority deque contains an element constructed with arguments @a args.
-//  @post All iterators and references are invalidated.
-//
-//  @note Complexity: O(log n)
-//  @note Exception safety: Strong
-*/
+/// @brief Emplaces an element into the priority deque.
+/// @param  args Arguments for the element to create in the the priority deque.
+/// @post Priority deque contains an element constructed with arguments @a args.
+/// @post All iterators and references are invalidated.
+///
+/// @note Complexity: O(log n)
+/// @note Exception safety: Strong
   template<typename... Args>
   void                    emplace     (Args&&...);
 #endif
 
-//! @{
-/** @brief Accesses a maximal element in the deque.
-//  @return Const reference to a maximal element in the priority deque.
-//  @pre  Priority deque contains one or more elements.
-//  @see  minimum, pop_maximum
-//
-//  @note Complexity: O(1)
-//  @note Exception safety: No-throw if precondition holds.
-*/
+/// @{
+/// @brief Accesses a maximal element in the deque.
+/// @return Const reference to a maximal element in the priority deque.
+/// @pre  Priority deque contains one or more elements.
+/// @see  minimum, pop_maximum
+///
+/// @note Complexity: O(1)
+/// @note Exception safety: No-throw if precondition holds.
   const_reference         maximum     (void) const;
-/** @brief Accesses a minimal element in the deque.
-//  @return Const reference to a minimal element in the priority deque.
-//  @pre  Priority deque contains one or more elements.
-//  @see  maximum, pop_minimum
-//
-//  @note Complexity: O(1)
-//  @note Exception safety: No-throw if precondition holds.
-*/
+/// @brief Accesses a minimal element in the deque.
+/// @return Const reference to a minimal element in the priority deque.
+/// @pre  Priority deque contains one or more elements.
+/// @see  maximum, pop_minimum
+///
+/// @note Complexity: O(1)
+/// @note Exception safety: No-throw if precondition holds.
   const_reference         minimum     (void) const;
-//! @details Identical to std::priority_queue top(). @see @a maximum
+/// @details Identical to std::priority_queue top().
+/// @see @a maximum
   inline const_reference  top         (void) const  { return maximum(); };
 
-//! @}
-//! @{
+/// @}
+/// @{
 
-/** @brief Removes a maximal element from the deque.
-//  @pre  Priority deque contains one or more elements.
-//  @post A minimal element has been removed from the priority deque.
-//  @post All iterators and references are invalidated.
-//  @see  minimum, pop_maximum
-//
-//  @note Complexity: O(log n)
-//  @note Exception safety: Strong
-*/
+/// @brief Removes a maximal element from the deque.
+/// @pre  Priority deque contains one or more elements.
+/// @post A minimal element has been removed from the priority deque.
+/// @post All iterators and references are invalidated.
+/// @see  minimum, pop_maximum
+///
+/// @note Complexity: O(log n)
+/// @note Exception safety: Strong
   void                    pop_maximum (void);
 
-/** @brief Removes a minimal element from the deque.
-//  @pre  Priority deque contains one or more elements.
-//  @post A maximal element has been removed from the priority deque.
-//  @post All iterators and references are invalidated.
-//  @see  maximum, pop, pop_minimum
-//
-//  @note Complexity: O(log n)
-//  @note Exception safety: Strong
-*/
+/// @brief Removes a minimal element from the deque.
+/// @pre  Priority deque contains one or more elements.
+/// @post A maximal element has been removed from the priority deque.
+/// @post All iterators and references are invalidated.
+/// @see  maximum, pop, pop_minimum
+///
+/// @note Complexity: O(log n)
+/// @note Exception safety: Strong
   void                    pop_minimum (void);
-//! @details Identical to std::priority_queue pop(). @see @a pop_maximum
+/// @details Identical to std::priority_queue pop(). @see @a pop_maximum
   inline void             pop         (void)        { pop_maximum(); };
-//! @}
+/// @}
 
 //--------------------------------Deque Size-----------------------------------|
-//! @{
-//! @brief Returns true if the priority deque is empty, false if it is not.
-  inline bool             empty       (void) const  {return sequence_.empty();};
-//! @brief Returns the number of elements in the priority deque.
-  inline size_type        size        (void) const  {return sequence_.size(); };
-//! @brief Returns the maximum number of elements that can be contained.
-  inline size_type        max_size    (void) const  {
-    return sequence_.max_size();
-  };
-//! @}
+/// @{
+/// @brief Returns true if the priority deque is empty, false if it is not.
+  inline bool             empty       (void) const;
+/// @brief Returns the number of elements in the priority deque.
+  inline size_type        size        (void) const;
+/// @brief Returns the maximum number of elements that can be contained.
+  inline size_type        max_size    (void) const;
+/// @}
 
 //--------------------------Whole-Deque Operations-----------------------------|
 //! @brief Removes all elements from the priority deque.
@@ -357,230 +329,24 @@ class priority_deque {
   Compare compare_;
 };
 
-//-------------------------------Constructors----------------------------------|
-//----------------------------Default Constructor------------------------------|
-template <typename T, typename S, typename C>
-priority_deque<T, S, C>::priority_deque (const C& comp, const S& seq)
-  : sequence_(seq), compare_(comp)
-{
-  heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-}
-#if (__cplusplus >= 201103L)
-template <typename T, typename S, typename C>
-priority_deque<T, S, C>::priority_deque (const C& comp, S&& seq)
-  : sequence_(std::move(seq)), compare_(comp)
-{
-  heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-}
-#endif
-
-//---------------------------Create from Iterators-----------------------------|
-template <typename T, typename S, typename C>
-template <typename InputIterator>
-priority_deque<T, S, C>::priority_deque (InputIterator first,InputIterator last,
-                                         const C& comp, const S& seq)
-: sequence_(seq), compare_(comp)
-{
-  sequence_.insert(sequence_.end(), first, last);
-  try {
-    heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-  } catch (...) {
-    sequence_.erase(sequence_.end() - std::distance(first, last),
-                    sequence_.end());
-    throw;  //  Re-throw the current exception.
-  }
-}
-#if (__cplusplus >= 201103L)
-template <typename T, typename S, typename C>
-template <typename InputIterator>
-priority_deque<T, S, C>::priority_deque (InputIterator first,InputIterator last,
-                                         const C& comp, S&& seq)
-: sequence_(std::move(seq)), compare_(comp)
-{
-  sequence_.insert(sequence_.end(), first, last);
-  try {
-    heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-  } catch (...) {
-    sequence_.erase(sequence_.end() - std::distance(first, last),
-                    sequence_.end());
-    throw;  //  Re-throw the current exception.
-  }
-}
-#endif
-
-//-----------------------------Restricted Access-------------------------------|
-//------------------------------Insert / Emplace-------------------------------|
-template <typename T, typename Sequence, typename Compare>
-void priority_deque<T, Sequence, Compare>::push (const value_type& value) {
-  sequence_.push_back(std::move(value));
-  try {
-    heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-  } catch (...) {
-    sequence_.pop_back();
-    throw;  //  Re-throw the current exception.
-  }
-}
-#if (__cplusplus >= 201103L)
-template <typename T, typename Sequence, typename Compare>
-void priority_deque<T, Sequence, Compare>::push (value_type&& value) {
-  sequence_.push_back(std::move(value));
-  try {
-    heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-  } catch (...) {
-    sequence_.pop_back();
-    throw;  //  Re-throw the current exception.
-  }
-}
-
-template <typename T, typename Sequence, typename Compare>
-template<typename... Args>
-void priority_deque<T, Sequence, Compare>::emplace (Args&&... args) {
-  sequence_.emplace_back(std::forward<Args>(args)...);
-  try {
-    heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-  } catch (...) {
-    sequence_.pop_back();
-    throw;  //  Re-throw the current exception.
-  }
-}
-#endif
-
-//---------------------------Observe Maximum/Minimum---------------------------|
-template <typename T, typename Sequence, typename Compare>
-inline typename priority_deque<T, Sequence, Compare>::const_reference
-  priority_deque<T, Sequence, Compare>::maximum  (void) const
-{
-  BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT(!empty(),
-    "Empty priority deque has no maximal element. Reference undefined.");
-  const_iterator it = sequence_.begin() + 1;
-  return (it == sequence_.end()) ? sequence_.front() : *it;
-}
-
-template <typename T, typename Sequence, typename Compare>
-typename priority_deque<T, Sequence, Compare>::const_reference
-  priority_deque<T, Sequence, Compare>::minimum  (void) const
-{
-  BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT(!empty(),
-    "Empty priority deque has no minimal element. Reference undefined.");
-  return sequence_.front();
-}
-//---------------------------Remove Maximum/Minimum----------------------------|
-template <typename T, typename Sequence, typename Compare>
-void priority_deque<T, Sequence, Compare>::pop_minimum (void) {
-  BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT(!empty(),
-    "Empty priority deque has no maximal element. Removal impossible.");
-  heap::pop_interval_heap_min(sequence_.begin(), sequence_.end(), compare_);
-  try {
-    sequence_.pop_back();
-  } catch (...) {
-//  If pop_back has a strong guarantee, this will restore the heap.
-    heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-    throw;  //  Re-throw the current exception.
-  }
-}
-
-template <typename T, typename Sequence, typename Compare>
-void priority_deque<T, Sequence, Compare>::pop_maximum (void) {
-  BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT(!empty(),
-    "Empty priority deque has no minimal element. Removal undefined.");
-  heap::pop_interval_heap_max(sequence_.begin(), sequence_.end(), compare_);
-  try {
-    sequence_.pop_back();
-  } catch (...) {
-//  If pop_back has a strong guarantee, this will restore the heap.
-    heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-    throw;  //  Re-throw the current exception.
-  }
-}
-
-//--------------------------Whole-Deque Operations-----------------------------|
-template <typename T, typename S, typename C>
-void priority_deque<T, S, C>::clear (void) {
-  sequence_.clear();
-}
-//-----------------------------------Merge-------------------------------------|
-template <typename T, typename S, typename C>
-template <typename InputIterator>
-void priority_deque<T, S, C>::merge (InputIterator first, InputIterator last) {
-  sequence_.insert(sequence_.end(), first, last);
-  try {
-    heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-  } catch (...) {
-    sequence_.erase(sequence_.end() - std::distance(first, last),
-                    sequence_.end());
-    throw;  //  Re-throw the current exception.
-  }
-}
-
-//----------------------------Swap Specialization------------------------------|
-template <typename T, typename S, typename C>
-inline void priority_deque<T, S, C>::swap (priority_deque<T, S, C>& other) {
-  using std::swap;
-
-  swap(compare_, other.compare_);
-  sequence_.swap(other.sequence_);
-}
-
-template <typename T, typename S, typename C>
-inline void swap (priority_deque<T, S, C>& deque1,
-                  priority_deque<T, S, C>& deque2)
-{
-  deque1.swap(deque2);
-}
-
-//---------------------------Random-Access Mutators----------------------------|
-template <typename T, typename S, typename C>
-void priority_deque<T, S, C>::update (const_iterator random_it,
-                                      const value_type& value)
-{
-  const difference_type ind = random_it - begin();
-  BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT((0 <= ind) &&
-    (ind < end() - begin()), "Iterator out of bounds; can't set element.");
-//  Providing the strong guarantee would require saving a copy.
-  *(sequence_.begin() + ind) = value;
-  heap::update_interval_heap(sequence_.begin(),sequence_.end(),ind,compare_);
-}
-#if (__cplusplus >= 201103L)
-//  Move-enabled function provides strong exception-safety guarantee.
-template <typename T, typename S, typename C>
-void priority_deque<T, S, C>::update (const_iterator random_it,
-                                      value_type&& value)
-{
-  using namespace std;
-
-  const difference_type ind = random_it - begin();
-  BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT((0 <= ind) &&
-    (ind < end() - begin()), "Iterator out of bounds; can't set element.");
-//  Providing the strong guarantee would require saving a copy.
-  swap(*(sequence_.begin() + ind), value);
-  try {
-    heap::update_interval_heap(sequence_.begin(),sequence_.end(),ind,compare_);
-  } catch (...) {
-//  Restore the original value.
-    swap(*(sequence_.begin() + ind), value);
-    throw;  //  Re-throw current exception.
-  }
-}
-#endif
-
-template <typename T, typename Sequence, typename Compare>
-void priority_deque<T, Sequence, Compare>::erase (const_iterator random_it) {
-  const difference_type index = random_it - begin();
-  BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT((0 <= index) &&
-    (index < end() - begin()), "Iterator out of bounds; can't erase element.");
-//  Move the element pointed to by random_it to the end of the sequence.
-  heap::pop_interval_heap(sequence_.begin(), sequence_.end(), index,compare_);
-  try {
-//  Remove the (moved) element.
-    sequence_.pop_back();
-  } catch (...) {
-//  If pop_back failed, restore the heap property.
-    heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-    throw;  //  Re-throw the current exception.
-  }
-}
+/** @brief Swaps the elements of two priority deques.
+// @relates priority_deque
+//  @param deque1,deque2 Priority deques.
+//  @post @a deque1 contains the elements originally in @a deque2, and @a deque2
+//  contains the elements originally in @a deque1
+//  @post All iterators and references are invalidated.
+//
+//  @note Complexity: O(1)
+//  @note Exception safety: No-throw.
+*/
+template <typename Type, typename Sequence, typename Compare>
+void swap (priority_deque<Type, Sequence, Compare>& deque1,
+           priority_deque<Type, Sequence, Compare>& deque2);
 
 } //  Namespace boost::container
 } //  Namespace boost
+
+//  Implementation.
+#include "priority_deque.inl"
 
 #endif
