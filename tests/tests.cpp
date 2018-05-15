@@ -1,8 +1,5 @@
-//#define NDEBUG 1
-
-#ifndef __cplusplus
-#error A C++ compiler is required.
-#endif
+#include "../priority_deque.hpp"
+#include "priority_deque_verify.hpp"
 
 #include <vector>
 #include <queue>
@@ -10,9 +7,6 @@
 #include <stdint.h>
 #include <time.h>
 #include <algorithm>
-
-#include "priority_deque.hpp"
-#include "priority_deque_verify.hpp"
 
 int main();
 
@@ -59,6 +53,7 @@ int main() {
 {
   priority_deque<int> test_deque;
 //  Sufficient sample size for observing all potential interesting behaviors.
+  std::cerr << "Testing invariants during push...\n";
   for (int i = 0; i < 256; ++i) {
     try {
       test_deque.push(i);
@@ -77,6 +72,8 @@ int main() {
       break;
     }
   }
+
+  std::cerr << "Testing invariants during merge...\n";
   std::vector<int> test_vector;
   for (int i = 0; i < 256; ++i) {
     test_vector.push_back(i);
@@ -102,17 +99,6 @@ int main() {
     }
   }
 }
-//  Benchmark performance relative to std::priority_queue.
-#ifdef BENCHMARK
-{
-  typedef intmax_t benchmark_type;
-  const unsigned benchmark_elements = 20000000;
-  std::cout << "PD: ";
-  benchmark_priority_queue<priority_deque<benchmark_type> >(benchmark_elements);
-  std::cout << "PQ: ";
-  benchmark_priority_queue<priority_queue<benchmark_type> >(benchmark_elements);
-}
-#endif
 
 #ifdef VERIFY_HEAP
   std::cout << "\n\nTesting heap integrity after:\n";
@@ -141,7 +127,7 @@ int main() {
     boost::heap::make_interval_heap(v.begin(), v.end(), std::less<uint32_t>());
     if (!boost::heap::is_interval_heap(v.begin(), v.end(), std::less<uint32_t>())) {
       std::cout << "Failed\n";
-      for (auto it = v.begin(); it != v.end(); ++it)
+      for (std::vector<uint32_t>::const_iterator it = v.begin(); it != v.end(); ++it)
         std::cout << *it << ", ";
       std::cout << "\n";
     }
@@ -176,7 +162,7 @@ int main() {
 	}
   pd.clear();
 
-  std::cout << "'push', 'pop_maximum', 'pop_minimum', 'erase', 'set' (indefinitely)\n";
+  std::cout << "'push', 'pop_maximum', 'pop_minimum', 'erase', 'set' (10000x)\n";
   boost::container::priority_deque<int> test_pd;
   for (int n = 0; n < 13; ++n) {
     test_pd.push(rand());
@@ -184,7 +170,7 @@ int main() {
       std::cout << "Failed push (error in replace_leaf)\n";
   }
   int last_rand = -1;
-  while (true) {
+  for (unsigned remaining = 10000; remaining; --remaining) {
     if (test_pd.size() < 3000) {
       last_rand = -1;
       test_pd.push(rand());
@@ -203,5 +189,18 @@ int main() {
     }
   }
 #endif
+
+//  Benchmark performance relative to std::priority_queue.
+#ifdef BENCHMARK
+{
+  typedef intmax_t benchmark_type;
+  const unsigned benchmark_elements = 20000000;
+  std::cout << "PD: ";
+  benchmark_priority_queue<priority_deque<benchmark_type> >(benchmark_elements);
+  std::cout << "PQ: ";
+  benchmark_priority_queue<priority_queue<benchmark_type> >(benchmark_elements);
+}
+#endif
+
   return 0;
 }
