@@ -1,21 +1,23 @@
 /*----------------------------------------------------------------------------*\
-|   Copyright (C) 2012-2013 Nathaniel McClatchey                               |
+|   Copyright (C) 2012-2013 Nathaniel J. McClatchey                            |
 |   Released under the Boost Software License Version 1.0, which may be found  |
 | at http://www.boost.org/LICENSE_1_0.txt                                      |
 \*----------------------------------------------------------------------------*/
 
 /*! @file priority_deque.hpp
+//  @author Nathaniel J. McClatchey, PhD
+//
 //    priority_deque.hpp provides the class priority_deque as a thin wrapper
 //  around the functions provided by interval_heap.hpp.
-//  @note Thread safety: No static variables are modified by any operation.
-//  @note Thread safety: Simultaneous read operations are safe.
-//  @note Thread safety: Simultaneous read-write or write-write operations are
-//  unsafe. Reading while writing may give incorrect output, but will not
-//  corrupt the deque.
-//  @note Exception safety: If the means of movement -- move, copy, or swap,
-//  depending on exception specifications -- does not throw, the guarantee is as
-//  strong as that of the action on the underlying container. (Unless otherwise
-//  specified). Providing a stronger guarantee is impractical.
+//  @par  Thread safety:
+//    No static variables are modified by any operation.  \n
+//    Simultaneous const operations are safe.  \n
+//    Using any non-const operation without synchronization causes undefined
+//  behavior.
+//  @par Exception safety:
+//    If the means of movement -- move, copy, or swap, depending on exception
+//  specifications -- does not throw, the guarantee is as strong as that of the
+//  action on the underlying container. (Unless otherwise specified)
 */
 
 #ifndef BOOST_CONTAINER_PRIORITY_DEQUE_HPP_
@@ -64,8 +66,10 @@ class priority_deque;
 //  contains the elements originally in @a deque1
 //  @post All iterators and references are invalidated.
 //
-//  @note Complexity: O(1)
-//  @note Exception safety: No-throw.
+//  @par  Complexity:
+//    O(1) - Does not depend on the size of the deque.
+//  @par Exception safety:
+//    Does not throw.
 */
 template <typename Type, typename Sequence, typename Compare>
 void swap (priority_deque<Type, Sequence, Compare>& deque1,
@@ -136,8 +140,10 @@ class priority_deque {
 //  @param seq Instance of container class.
 //  @post Deque contains copies of all elements from @a sequence.
 //
-//  @note Complexity: O(n)
-//  @note Exception safety: None. As strong as make_interval_heap
+//  @par Complexity:
+//    O(n) - Linear on the size of the deque.
+//  @par Exception safety:
+//    None.
 */
 #if (__cplusplus >= 201103L)
   explicit priority_deque             (const Compare& =Compare(),
@@ -155,8 +161,10 @@ class priority_deque {
 //  @post Deque contains copies of all elements in @a sequence (if specified)
 //  and in the range [ @a first, @a last).
 //
-//  @note Complexity: O(n)
-//  @note Exception safety: None. As strong as make_interval_heap
+//  @par  Complexity:
+//    O(n) - Linear on the size of the deque.
+//  @par  Exception safety:
+//    None.
 */
 #if (__cplusplus >= 201103L)
   template <typename InputIterator>
@@ -179,8 +187,11 @@ class priority_deque {
 //  @post Priority deque contains @a value or a copy of @a value.
 //  @post All iterators and references are invalidated.
 //
-//  @note Complexity: O(log n)
-//  @note Exception safety: Strong
+//  @par  Complexity:
+//    O(log n) - Logarithmic on the size of the deque.
+//  @par  Exception safety:
+//    Strong - If an exception is thrown, the deque is restored to the state it
+//  had before push was called.
 */
   void                    push        (const value_type&);
 #if (__cplusplus >= 201103L)
@@ -192,8 +203,11 @@ class priority_deque {
 //  @post Priority deque contains an element constructed with arguments @a args.
 //  @post All iterators and references are invalidated.
 //
-//  @note Complexity: O(log n)
-//  @note Exception safety: Strong
+//  @par  Complexity:
+//    O(log n) - Logarithmic on the size of the deque.
+//  @par  Exception safety:
+//    Strong - If an exception is thrown, the deque is restored to the state it
+//  had before emplace was called.
 */
   template<typename... Args>
   void                    emplace     (Args&&...);
@@ -205,8 +219,10 @@ class priority_deque {
 //  @pre  Priority deque contains one or more elements.
 //  @see  minimum, pop_maximum
 //
-//  @note Complexity: O(1)
-//  @note Exception safety: No-throw if precondition holds.
+//  @par  Complexity:
+//    O(1) - Does not on the size of the deque.
+//  @par  Exception safety:
+//    Does not throw, unless deque is empty.
 */
   const_reference         maximum     (void) const;
 /** @brief Accesses a minimal element in the deque.
@@ -214,11 +230,13 @@ class priority_deque {
 //  @pre  Priority deque contains one or more elements.
 //  @see  maximum, pop_minimum
 //
-//  @note Complexity: O(1)
-//  @note Exception safety: No-throw if precondition holds.
+//  @par  Complexity:
+//    O(1) - Does not on the size of the deque.
+//  @par  Exception safety:
+//    Does not throw, unless deque is empty.
 */
   const_reference         minimum     (void) const;
-//! @details Identical to std::priority_queue top(). @see @a maximum
+//! @details Identical to std::priority_queue top() and to maximum().
   inline const_reference  top         (void) const  { return maximum(); };
 
 //! @}
@@ -230,8 +248,11 @@ class priority_deque {
 //  @post All iterators and references are invalidated.
 //  @see  minimum, pop_maximum
 //
-//  @note Complexity: O(log n)
-//  @note Exception safety: Strong
+//  @par  Complexity:
+//    O(log n) - Logarithmic on the size of the deque.
+//  @par  Exception safety:
+//    Strong - If an exception is thrown, the deque is restored to the state it
+//  had before pop_maximum was called.
 */
   void                    pop_maximum (void);
 
@@ -241,21 +262,36 @@ class priority_deque {
 //  @post All iterators and references are invalidated.
 //  @see  maximum, pop, pop_minimum
 //
-//  @note Complexity: O(log n)
-//  @note Exception safety: Strong
+//  @par  Complexity:
+//    O(log n) - Logarithmic on the size of the deque.
+//  @par  Exception safety:
+//    Strong - If an exception is thrown, the deque is restored to the state it
+//  had before pop_minimum was called.
 */
   void                    pop_minimum (void);
-//! @details Identical to std::priority_queue pop(). @see @a pop_maximum
+//! @details Identical to std::priority_queue pop() and to pop_maximum()
   inline void             pop         (void)        { pop_maximum(); };
 //! @}
 
 //--------------------------------Deque Size-----------------------------------|
 //! @{
 //! @brief Returns true if the priority deque is empty, false if it is not.
+//! @par  Complexity:
+//!   O(1) - Does not on the size of the deque.
+//! @par  Exception safety:
+//!   Does not throw.
   inline bool             empty       (void) const  {return sequence_.empty();};
 //! @brief Returns the number of elements in the priority deque.
+//! @par  Complexity:
+//!   O(1) - Does not on the size of the deque.
+//! @par  Exception safety:
+//!   Does not throw.
   inline size_type        size        (void) const  {return sequence_.size(); };
 //! @brief Returns the maximum number of elements that can be contained.
+//! @par  Complexity:
+//!   O(1) - Does not on the size of the deque.
+//! @par  Exception safety:
+//!   Does not throw.
   inline size_type        max_size    (void) const  {
     return sequence_.max_size();
   };
@@ -271,8 +307,10 @@ class priority_deque {
 //  elements from this deque.
 //  @post All iterators and references are invalidated.
 //  @note Sequence containers are required to have swap functions.
-//  @note Complexity: O(1)
-//  @note Exception safety: No-throw.
+//  @par  Complexity:
+//    O(1) - Does not on the size of the deque.
+//  @par  Exception safety:
+//    Does not throw.
 */
   void                    swap        (priority_deque<Type, Sequence,Compare>&);
 
@@ -283,8 +321,10 @@ class priority_deque {
 //  the range.
 //  @post All iterators and references are invalidated.
 //
-//  @note Complexity: O(n)
-//  @note Exception safety: None. As strong as make_interval_heap
+//  @par Complexity:
+//    O(n) - Linear on the size of the deque.
+//  @par Exception safety:
+//    None.
 */
   template <typename InputIterator>
   void                    merge       (InputIterator first, InputIterator last);
@@ -299,8 +339,16 @@ class priority_deque {
 //-------------------------------Random Access---------------------------------|
 //!@{
 //! @brief Returns a const iterator at the beginning of the sequence.
+//! @par  Complexity:
+//!   O(1) - Does not depend on the size of the deque.
+//! @par  Exception safety:
+//!   Does not throw.
   inline const_iterator   begin       (void) const  {return sequence_.begin();};
 //! @brief Returns a const iterator past the end of the sequence.
+//! @par  Complexity:
+//!   O(1) - Does not depend on the size of the deque.
+//! @par  Exception safety:
+//!   Does not throw.
   inline const_iterator   end         (void) const  { return sequence_.end(); };
 
 /** @brief Modifies a specified element of the deque.
@@ -312,8 +360,10 @@ class priority_deque {
 //  @see erase
 //
 //  Elements within the deque may be unordered.
-//  @note Complexity: O(log n)
-//  @note Exception safety: Basic (move semantics allow strong guarantee)
+//  @par  Complexity:
+//    O(log n) - Logarithmic on the size of the deque.
+//  @par  Exception safety:
+//    Basic if const reference is passed, strong if rvalue reference is passed.
 */
   void                    update      (const_iterator, const value_type&);
 #if (__cplusplus >= 201103L)
@@ -327,8 +377,11 @@ class priority_deque {
 //  @post The deque no longer contains the element previously at @a random_it.
 //  @post All iterators and references are invalidated.
 //  @see set
-//  @note Complexity: O(log n)
-//  @note Exception safety: Basic. If iterators are not included, Strong.
+//  @par  Complexity:
+//    O(log n) - Logarithmic on the size of the deque.
+//  @par  Exception safety:
+//    Strong - If an exception is thrown, the deque returned to its original
+//  state.
 */
   void                    erase       (const_iterator);
 //!@}
@@ -412,7 +465,7 @@ priority_deque<T, S, C>::priority_deque (InputIterator first,InputIterator last,
 //------------------------------Insert / Emplace-------------------------------|
 template <typename T, typename Sequence, typename Compare>
 void priority_deque<T, Sequence, Compare>::push (const value_type& value) {
-  sequence_.push_back(std::move(value));
+  sequence_.push_back(value);
   try {
     heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
   } catch (...) {
@@ -546,18 +599,16 @@ template <typename T, typename S, typename C>
 void priority_deque<T, S, C>::update (const_iterator random_it,
                                       value_type&& value)
 {
-  using namespace std;
-
   const difference_type ind = random_it - begin();
   BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT((0 <= ind) &&
     (ind < end() - begin()), "Iterator out of bounds; can't set element.");
 //  Providing the strong guarantee would require saving a copy.
-  swap(*(sequence_.begin() + ind), value);
+  std::swap(*(sequence_.begin() + ind), value);
   try {
     heap::update_interval_heap(sequence_.begin(),sequence_.end(),ind,compare_);
   } catch (...) {
 //  Restore the original value.
-    swap(*(sequence_.begin() + ind), value);
+    std::swap(*(sequence_.begin() + ind), value);
     throw;  //  Re-throw current exception.
   }
 }

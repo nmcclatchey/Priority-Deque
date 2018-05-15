@@ -14,17 +14,13 @@
 //    A right bound is never less than its corresponding left bound.
 //    A left bound is never less than the left bound of its parent.
 //    A right bound is never less than the right bounds of its children.
-//  @note Exception safety: All functions in interval_heap.hpp provide at
-//  least the basic exception-safety guarantee. That is, no element will be lost
-//  in the event of an exception. Elements may, however, no longer form an
-//  interval heap.
-//  @note Exception safety: Pre-C++11: If the comparison and swap don't throw,
+//  @par  Exception safety:
+//    1. Pre-C++11: If the comparison and swap don't throw, neither do any of the
+//  interval-heap functions. \n
+//    2. C++11: If comparison, move-assign, and move-construct do not throw,
 //  neither do any of the interval-heap functions.
-//  @note Exception safety: C++11: If the comparison, move-assign, and
-//  move-construct, do not throw, neither do any of the interval-heap functions.
-//  @note Thread safety: No static variables are modified by any operation.
-//  @note Thread safety: Simultaneous read-write or write-write operations are
-//  unsafe.
+//  @par  Thread safety:
+//    No static variables are modified by any operation.  \n
 */
 #ifndef BOOST_HEAP_INTERVAL_HEAP_HPP_
 #define BOOST_HEAP_INTERVAL_HEAP_HPP_
@@ -44,7 +40,7 @@
 
 //  Bulk-loading operation is well-suited to threading.
 #ifndef BOOST_HEAP_INTERVAL_HEAP_USE_STD_THREAD
-#define BOOST_HEAP_INTERVAL_HEAP_USE_STD_THREAD (__cplusplus >= 201103L)
+#define BOOST_HEAP_INTERVAL_HEAP_USE_STD_THREAD false
 #endif
 #if (BOOST_HEAP_INTERVAL_HEAP_USE_STD_THREAD == true)
 #include <thread>
@@ -93,6 +89,7 @@ bool is_interval_heap (Iterator first, Iterator last, Compare compare);
 
 
 //-------------------------------Book-Keeping-----------------------------------
+/// \cond false
 namespace interval_heap_internal {
 #if (BOOST_HEAP_INTERVAL_HEAP_USE_STD_THREAD == true)
 /*! @brief Minimum number of elements in heap layer before threads branch. Can
@@ -135,6 +132,7 @@ template <bool left_bound, typename Iterator, typename Offset, typename Compare>
 void sift_down (Iterator first, Iterator last, Offset index, Compare compare,
                 Offset limit_child);
 } //  Namespace interval_heap_internal
+/// \endcond
 
 /*! @details This function restores the interval-heap property violated by the
 //  specified element.
@@ -146,9 +144,11 @@ void sift_down (Iterator first, Iterator last, Offset index, Compare compare,
 //  @a first + @a index is ignored.
 //  @post [ @a first, @a last) is a valid interval heap.
 //  @invariant No element is added to or removed from the range.
-//  @note Complexity: O(log n)
-//  @note Exception safety: Basic if move/copy/swap provide the basic
-//  guarantee. Strong if they do not throw exceptions.
+//  @par  Complexity:
+//    O(log n) - Logarithmic on the size of the heap.
+//  @par  Exception safety:
+//    Strong (rollback) if move/copy/swap (depending on C++ year) do not throw
+//  exceptions.
 */
 template <typename Iterator, typename Compare>
 void update_interval_heap (Iterator first, Iterator last,
@@ -172,9 +172,11 @@ void update_interval_heap (Iterator first, Iterator last,
 //  @pre [ @a first, @a last - 1) is a valid interval heap.
 //  @post [ @a first, @a last) is a valid interval heap.
 //  @invariant No element is added to or removed from the range.
-//  @note Complexity: O(log n)
-//  @note Exception safety: Basic if move/copy/swap provide the basic
-//  guarantee. Strong if they do not throw exceptions.
+//  @par  Complexity:
+//    O(log n) - Logarithmic on the size of the heap.
+//  @par  Exception safety:
+//    Strong (rollback) if move/copy/swap (depending on C++ year) do not throw
+//  exceptions.
 */
 template <typename Iterator, typename Compare>
 void push_interval_heap (Iterator first, Iterator last, Compare compare) {
@@ -194,9 +196,11 @@ void push_interval_heap (Iterator first, Iterator last, Compare compare) {
 //  @post The element originally at @a first + @a index has been moved to
 //  @a last - 1.
 //  @invariant No element is added to or removed from the range.
-//  @note Complexity: O(log n)
-//  @note Exception safety: Basic if move/copy/swap provide the basic
-//  guarantee. Strong if they do not throw exceptions.
+//  @par  Complexity:
+//    O(log n) - Logarithmic on the size of the heap.
+//  @par  Exception safety:
+//    Strong (rollback) if move/copy/swap (depending on C++ year) do not throw
+//  exceptions.
 */
 template <typename Iterator, typename Compare>
 void pop_interval_heap (Iterator first, Iterator last,
@@ -225,9 +229,11 @@ void pop_interval_heap (Iterator first, Iterator last,
 //  @post A minimal element from the range has been moved to @a last - 1.
 //  @post [ @a first, @a last - 1) is a valid interval heap.
 //  @invariant No element is added to or removed from the range.
-//  @note Complexity: O(log n)
-//  @note Exception safety: Basic if move/copy/swap provide the basic
-//  guarantee. Strong if they do not throw exceptions.
+//  @par  Complexity:
+//    O(log n) - Logarithmic on the size of the heap.
+//  @par  Exception safety:
+//    Strong (rollback) if move/copy/swap (depending on C++ year) do not throw
+//  exceptions.
 */
 template <typename Iterator, typename Compare>
 void pop_interval_heap_min (Iterator first, Iterator last, Compare compare) {
@@ -255,9 +261,11 @@ void pop_interval_heap_min (Iterator first, Iterator last, Compare compare) {
 //  @post A maximal element from the range has been moved to @a last - 1.
 //  @post [ @a first, @a last - 1) is a valid interval heap.
 //  @invariant No element is added to or removed from the range.
-//  @note Complexity: O(log n)
-//  @note Exception safety: Basic if move/copy/swap provide the basic
-//  guarantee. Strong if they do not throw exceptions.
+//  @par  Complexity:
+//    O(log n) - Logarithmic on the size of the heap.
+//  @par  Exception safety:
+//    Strong (rollback) if move/copy/swap (depending on C++ year) do not throw
+//  exceptions.
 */
 template <typename Iterator, typename Compare>
 void pop_interval_heap_max (Iterator first, Iterator last, Compare compare) {
@@ -285,8 +293,10 @@ void pop_interval_heap_max (Iterator first, Iterator last, Compare compare) {
 //  @pre [ @a first, @a last) is a valid interval heap.
 //  @post [ @a first, @a last) is sorted in ascending order.
 //  @invariant No element is added to or removed from the range.
-//  @note Complexity: O(n log n)
-//  @note Exception safety: Basic
+//  @par  Complexity:
+//    O(n log n) - Linearithmic on the size of the heap.
+//  @par  Exception safety:
+///   Basic - Elements are not added to or removed from the range.
 */
 template <typename Iterator, typename Compare>
 void sort_interval_heap (Iterator first, Iterator last, Compare compare) {
@@ -299,8 +309,10 @@ void sort_interval_heap (Iterator first, Iterator last, Compare compare) {
 }
 
 //! @brief Finds the largest subrange that forms a valid interval heap.
-//! @note Complexity: O(n)
-//! @note Exception safety: No-throw
+/// @par  Complexity:
+///   O(n) - Linear on the size of the heap.
+/// @par  Exception safety:
+///   Does not throw.
 template <typename Iterator, typename Compare>
 Iterator is_interval_heap_until (Iterator first, Iterator last, Compare compare)
 {
@@ -338,8 +350,10 @@ Iterator is_interval_heap_until (Iterator first, Iterator last, Compare compare)
 }
 
 //! @brief Checks whether the range is a valid interval heap.
-//! @note Complexity: O(n)
-//! @note Exception safety:No-throw
+/// @par  Complexity:
+///   O(n) - Linear on the size of the heap.
+/// @par  Exception safety:
+///   Does not throw.
 template <typename Iterator, typename Compare>
 bool is_interval_heap (Iterator first, Iterator last, Compare compare) {
   try {
@@ -355,9 +369,10 @@ bool is_interval_heap (Iterator first, Iterator last, Compare compare) {
 //  @param compare A comparison object.
 //  @post [ @a first, @a last) is a valid interval heap.
 //  @invariant No element is added to or removed from the range.
-//  @note Complexity: O(n)
-//  @note Exception safety: Basic if move/copy/swap provide the basic
-//  guarantee.
+/// @par  Complexity:
+///   O(n) - Linear on the size of the heap.
+/// @par  Exception safety:
+///   Basic - Elements are not added to or removed from the range.
 //  @remark Threaded.
 */
 template <typename Iterator, typename Compare>
@@ -614,11 +629,11 @@ void sift_down (Iterator first, Iterator last, Offset origin, Compare compare,
 {
 //  Use the most specialized available functions.
   using namespace std;
-  typedef typename iterator_traits<Iterator>::value_type Value;
 
 //  By keeping track of where I started, I can roll back all changes.
   Offset index = origin;
 #if (__cplusplus >= 201103L)  //  C++11
+  typedef typename iterator_traits<Iterator>::value_type Value;
   Value limbo = std::move_if_noexcept(*(first + index));
 #endif
 
