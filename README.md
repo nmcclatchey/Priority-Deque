@@ -1,7 +1,7 @@
-Priority-Deque
+[![Build Status](https://travis-ci.org/nmcclatchey/Priority-Deque.svg?branch=master)](https://travis-ci.org/nmcclatchey/Priority-Deque)
+[![Coverage Status](https://coveralls.io/repos/github/nmcclatchey/Priority-Deque/badge.svg?branch=master)](https://coveralls.io/github/nmcclatchey/Priority-Deque?branch=master)
 
-==============
-
+# Priority-Deque
 
 
 This project is my implementation of a priority deque (double-ended priority queue) as a C++ class template.
