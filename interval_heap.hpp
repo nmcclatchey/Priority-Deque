@@ -131,6 +131,34 @@ void sift_leaf_min (Iterator first, Iterator last, Offset index,
 template <bool left_bound, typename Iterator, typename Offset, typename Compare>
 void sift_down (Iterator first, Iterator last, Offset index, Compare compare,
                 Offset limit_child);
+
+template<class T>
+struct RAIISwapper
+{
+  RAIISwapper (T * p1, T * p2)
+    : ptr1_(p1), ptr2_(p2)
+  {
+  }
+
+  RAIISwapper (RAIISwapper const &);
+  RAIISwapper & operator= (RAIISwapper const &);
+
+  inline ~RAIISwapper (void)
+  {
+    using std::swap;
+    if (ptr1_)
+      swap(*ptr1_, *ptr2_);
+  }
+
+  inline void disable (void)
+#if (__cplusplus >= 201103L)
+  noexcept
+#endif
+  {
+    ptr1_ = nullptr;
+  }
+  T * ptr1_, * ptr2_;
+};
 } //  Namespace interval_heap_internal
 /// \endcond
 
@@ -207,16 +235,14 @@ void pop_interval_heap (Iterator first, Iterator last,
           typename std::iterator_traits<Iterator>::difference_type index,
           Compare compare)
 {
+  typedef interval_heap_internal::RAIISwapper<typename std::iterator_traits<Iterator>::value_type> guard_t;
   using namespace std;
   --last;
-  swap(*(first + index), *last);
-  try {
-    update_interval_heap<Iterator, Compare>(first, last, index, compare);
-  } catch (...) {
-//  Roll back for strong guarantee.
-    swap(*last, *(first + index));
-    throw;  //  Re-throw the current exception.
-  }
+  guard_t scope_guard (std::addressof(*(first + index)), std::addressof(*last));
+  swap(*scope_guard.ptr1_, *scope_guard.ptr2_);
+  update_interval_heap<Iterator, Compare>(first, last, index, compare);
+  scope_guard.disable();
+//  If the update throws, the scope guard will undo it.
 }
 
 /*! @details This function moves a minimal element to the end of the range of
@@ -242,13 +268,10 @@ void pop_interval_heap_min (Iterator first, Iterator last, Compare compare) {
   typedef typename iterator_traits<Iterator>::difference_type Offset;
   --last;
   swap(*first, *last);
-  try {
-    sift_down<true, Iterator, Offset, Compare>(first, last, 0, compare, 2);
-  } catch (...) {
-//  Roll back for strong guarantee.
-    swap(*last, *first);
-    throw;  //  Re-throw the current exception.
-  }
+  typedef interval_heap_internal::RAIISwapper<typename std::iterator_traits<Iterator>::value_type> guard_t;
+  guard_t scope_guard (std::addressof(*first), std::addressof(*last));
+  sift_down<true, Iterator, Offset, Compare>(first, last, 0, compare, 2);
+  scope_guard.disable();
 }
 
 /*! @details This function moves a maximal element to the end of the range of
@@ -276,14 +299,11 @@ void pop_interval_heap_max (Iterator first, Iterator last, Compare compare) {
   if (last - first <= 2)
     return;
   --last;
-  swap(*(first + 1), *last);
-  try {
-    sift_down<false, Iterator, Offset, Compare>(first, last, 1, compare, 2);
-  } catch (...) {
-//  Roll back for strong guarantee.
-    swap(*last, *(first + 1));
-    throw;  //  Re-throw the current exception.
-  }
+  typedef interval_heap_internal::RAIISwapper<typename std::iterator_traits<Iterator>::value_type> guard_t;
+  guard_t scope_guard (std::addressof(*(first + 1)), std::addressof(*last));
+  swap(*scope_guard.ptr1_, *scope_guard.ptr2_);
+  sift_down<false, Iterator, Offset, Compare>(first, last, 1, compare, 2);
+  scope_guard.disable();
 }
 
 /*! @details This function takes an interval heap and sorts its elements in
@@ -577,14 +597,12 @@ void sift_leaf_max (Iterator first, Iterator last, Offset index,
   const Offset co_index = ((index_end - 1) / 2 < index)
                             ? (index ^ 1) : (index * 2);
   if (compare(*(first + index), *(first + co_index))) {
-    swap(*(first + index), *(first + co_index));
-    try { //  Provides strong exception-safety guarantee, unless move throws.
-      sift_up<true, Iterator, Offset, Compare>(first, co_index, compare,
-                                               limit_child);
-    } catch (...) { //  Rollback for strong guarantee.
-      swap(*(first + index), *(first + co_index));
-      throw;  //  Re-throw the current exception.
-    }
+    typedef interval_heap_internal::RAIISwapper<typename std::iterator_traits<Iterator>::value_type> guard_t;
+    guard_t scope_guard (std::addressof(*(first + index)), std::addressof(*(first + co_index)));
+    swap(*scope_guard.ptr1_, *scope_guard.ptr2_);
+    sift_up<true, Iterator, Offset, Compare>(first, co_index, compare,
+                                             limit_child);
+    scope_guard.disable();
   } else
     sift_up<false, Iterator, Offset, Compare>(first, index, compare,
                                               limit_child);
@@ -610,14 +628,12 @@ void sift_leaf_min (Iterator first, Iterator last, Offset index,
     co_index = (co_index / 2 - 1) | 1;
   }
   if (compare(*(first + co_index), *(first + index))) {
-    swap(*(first + index), *(first + co_index));
-    try { //  Provides strong exception-safety guarantee, unless move throws.
-      sift_up<false, Iterator, Offset, Compare>(first, co_index, compare,
-                                                limit_child);
-    } catch (...) { //  Rollback for strong guarantee.
-      swap(*(first + index), *(first + co_index));
-      throw;  //  Re-throw the current exception.
-    }
+    typedef interval_heap_internal::RAIISwapper<typename std::iterator_traits<Iterator>::value_type> guard_t;
+    guard_t scope_guard (std::addressof(*(first + index)), std::addressof(*(first + co_index)));
+    swap(*scope_guard.ptr1_, *scope_guard.ptr2_);
+    sift_up<false, Iterator, Offset, Compare>(first, co_index, compare,
+                                              limit_child);
+    scope_guard.disable();
   } else
     sift_up<true, Iterator, Offset, Compare>(first, index, compare,limit_child);
 }

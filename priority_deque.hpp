@@ -69,7 +69,7 @@ class priority_deque;
 //  @par  Complexity:
 //    O(1) - Does not depend on the size of the deque.
 //  @par Exception safety:
-//    Does not throw.
+//    No-throw.
 */
 template <typename Type, typename Sequence, typename Compare>
 void swap (priority_deque<Type, Sequence, Compare>& deque1,
@@ -145,14 +145,14 @@ class priority_deque {
 //  @par Exception safety:
 //    None.
 */
-#if (__cplusplus >= 201103L)
-  explicit priority_deque             (const Compare& =Compare(),
-                                       Sequence&& =Sequence());
+  priority_deque                      (void);
 //! @overload
-  priority_deque                      (const Compare&, const Sequence&);
-#else
-  explicit priority_deque             (const Compare& =Compare(),
-                                       const Sequence& =Sequence());
+  explicit priority_deque             (Compare const &);
+//! @overload
+  priority_deque                      (Compare const &, Sequence const &);
+#if (__cplusplus >= 201103L)
+//! @overload
+  explicit priority_deque             (Compare const &, Sequence &&);
 #endif
 /** @brief Constructs a new priority deque from a sequence of elements.
 //  @param first,last Range of elements.
@@ -169,17 +169,18 @@ class priority_deque {
 #if (__cplusplus >= 201103L)
   template <typename InputIterator>
   priority_deque                      (InputIterator first, InputIterator last,
-                                       const Compare& =Compare(),
-                                       Sequence&& =Sequence());
+                                       Compare const & =Compare(),
+                                       Sequence && =Sequence());
 //! @overload
   template <typename InputIterator>
   priority_deque                      (InputIterator first, InputIterator last,
-                                       const Compare&, const Sequence&);
+                                       Compare const &,
+                                       Sequence const &);
 #else
   template <typename InputIterator>
   priority_deque                      (InputIterator first, InputIterator last,
-                                       const Compare& =Compare(),
-                                       const Sequence& =Sequence());
+                                       Compare const & =Compare(),
+                                       Sequence const & =Sequence());
 #endif
 //-----------------------------Restricted Access-------------------------------|
 /** @brief Copies an element into the priority deque.
@@ -193,10 +194,10 @@ class priority_deque {
 //    Strong - If an exception is thrown, the deque is restored to the state it
 //  had before push was called.
 */
-  void                    push        (const value_type&);
+  void                    push        (value_type const &);
 #if (__cplusplus >= 201103L)
 //!@overload
-  void                    push        (value_type&&);
+  void                    push        (value_type &&);
 
 /** @brief Emplaces an element into the priority deque.
 //  @param  args Arguments for the element to create in the the priority deque.
@@ -210,7 +211,7 @@ class priority_deque {
 //  had before emplace was called.
 */
   template<typename... Args>
-  void                    emplace     (Args&&...);
+  void                    emplace     (Args &&...);
 #endif
 
 //! @{
@@ -222,7 +223,7 @@ class priority_deque {
 //  @par  Complexity:
 //    O(1) - Does not on the size of the deque.
 //  @par  Exception safety:
-//    Does not throw, unless deque is empty.
+//    No-throw, if deque contains at least 1 element.
 */
   const_reference         maximum     (void) const;
 /** @brief Accesses a minimal element in the deque.
@@ -233,11 +234,11 @@ class priority_deque {
 //  @par  Complexity:
 //    O(1) - Does not on the size of the deque.
 //  @par  Exception safety:
-//    Does not throw, unless deque is empty.
+//    No-throw, if deque contains at least 1 element.
 */
   const_reference         minimum     (void) const;
-//! @details Identical to std::priority_queue top() and to maximum().
-  inline const_reference  top         (void) const  { return maximum(); };
+//! @details Identical to std::priority_queue top(). @see @a maximum
+  inline const_reference  top         (void) const  { return maximum(); }
 
 //! @}
 //! @{
@@ -269,8 +270,8 @@ class priority_deque {
 //  had before pop_minimum was called.
 */
   void                    pop_minimum (void);
-//! @details Identical to std::priority_queue pop() and to pop_maximum()
-  inline void             pop         (void)        { pop_maximum(); };
+//! @details Identical to std::priority_queue pop(). @see @a pop_maximum
+  inline void             pop         (void)        { pop_maximum(); }
 //! @}
 
 //--------------------------------Deque Size-----------------------------------|
@@ -279,22 +280,22 @@ class priority_deque {
 //! @par  Complexity:
 //!   O(1) - Does not on the size of the deque.
 //! @par  Exception safety:
-//!   Does not throw.
-  inline bool             empty       (void) const  {return sequence_.empty();};
+//!   No-throw.
+  inline bool             empty       (void) const  {return sequence_.empty();}
 //! @brief Returns the number of elements in the priority deque.
 //! @par  Complexity:
 //!   O(1) - Does not on the size of the deque.
 //! @par  Exception safety:
-//!   Does not throw.
-  inline size_type        size        (void) const  {return sequence_.size(); };
+//!   No-throw.
+  inline size_type        size        (void) const  {return sequence_.size(); }
 //! @brief Returns the maximum number of elements that can be contained.
 //! @par  Complexity:
 //!   O(1) - Does not on the size of the deque.
 //! @par  Exception safety:
-//!   Does not throw.
+//!   No-throw.
   inline size_type        max_size    (void) const  {
     return sequence_.max_size();
-  };
+  }
 //! @}
 
 //--------------------------Whole-Deque Operations-----------------------------|
@@ -310,7 +311,7 @@ class priority_deque {
 //  @par  Complexity:
 //    O(1) - Does not on the size of the deque.
 //  @par  Exception safety:
-//    Does not throw.
+//    No-throw.
 */
   void                    swap        (priority_deque<Type, Sequence,Compare>&);
 
@@ -324,15 +325,24 @@ class priority_deque {
 //  @par Complexity:
 //    O(n) - Linear on the size of the deque.
 //  @par Exception safety:
-//    None.
+//    Basic; invariants are maintained. Note that elements may be lost during
+//    exception handling.
 */
   template <typename InputIterator>
-  void                    merge       (InputIterator first, InputIterator last);
+  void                    insert      (InputIterator first, InputIterator last);
+//! @brief Merges a sequence of elements into the priority deque.
+//! @overload
+  template <typename InputIterator>
+  void                    merge       (InputIterator first, InputIterator last)
+  {
+    insert(first, last);
+  }
 //! @brief Merges a container's elements into the priority deque.
 //! @overload
   template <typename SourceContainer>
-  inline void             merge       (const SourceContainer& source) {
-    merge(source.begin(), source.end());
+  inline void             merge       (SourceContainer const & source)
+  {
+    insert(source.begin(), source.end());
   }
 //!@}
 
@@ -342,14 +352,14 @@ class priority_deque {
 //! @par  Complexity:
 //!   O(1) - Does not depend on the size of the deque.
 //! @par  Exception safety:
-//!   Does not throw.
-  inline const_iterator   begin       (void) const  {return sequence_.begin();};
+//!   No-throw.
+  inline const_iterator   begin       (void) const  {return sequence_.begin();}
 //! @brief Returns a const iterator past the end of the sequence.
 //! @par  Complexity:
 //!   O(1) - Does not depend on the size of the deque.
 //! @par  Exception safety:
-//!   Does not throw.
-  inline const_iterator   end         (void) const  { return sequence_.end(); };
+//!   No-throw.
+  inline const_iterator   end         (void) const  { return sequence_.end(); }
 
 /** @brief Modifies a specified element of the deque.
 //  @param  random_it A valid iterator in the range [begin, end).
@@ -400,12 +410,13 @@ class priority_deque {
 
 //--------------------------------Protected------------------------------------|
  protected:
-  inline        container_type& sequence  (void)        { return sequence_; };
-  inline const  container_type& sequence  (void) const  { return sequence_; };
-  inline        value_compare&  compare   (void)        { return compare_; };
-  inline const  value_compare&  compare   (void) const  { return compare_; };
+  inline        container_type& sequence  (void)        { return sequence_; }
+  inline const  container_type& sequence  (void) const  { return sequence_; }
+  inline        value_compare&  compare   (void)        { return compare_; }
+  inline const  value_compare&  compare   (void) const  { return compare_; }
 //---------------------------------Private-------------------------------------|
  private:
+  void pop_back_or_rollback (void);
   Sequence sequence_;
   Compare compare_;
 };
@@ -413,7 +424,21 @@ class priority_deque {
 //-------------------------------Constructors----------------------------------|
 //----------------------------Default Constructor------------------------------|
 template <typename T, typename S, typename C>
-priority_deque<T, S, C>::priority_deque (const C& comp, const S& seq)
+priority_deque<T, S, C>::priority_deque (void)
+  : sequence_(), compare_()
+{
+//  Note: A "Container" is required to be empty when constructed.
+}
+
+template <typename T, typename S, typename C>
+priority_deque<T, S, C>::priority_deque (C const & comp)
+  : sequence_(), compare_(comp)
+{
+//  Note: A "Container" is required to be empty when constructed.
+}
+
+template <typename T, typename S, typename C>
+priority_deque<T, S, C>::priority_deque (C const & comp, S const & seq)
   : sequence_(seq), compare_(comp)
 {
   heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
@@ -431,17 +456,11 @@ priority_deque<T, S, C>::priority_deque (const C& comp, S&& seq)
 template <typename T, typename S, typename C>
 template <typename InputIterator>
 priority_deque<T, S, C>::priority_deque (InputIterator first,InputIterator last,
-                                         const C& comp, const S& seq)
+                                         C const & comp, S const & seq)
 : sequence_(seq), compare_(comp)
 {
   sequence_.insert(sequence_.end(), first, last);
-  try {
-    heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-  } catch (...) {
-    sequence_.erase(sequence_.end() - std::distance(first, last),
-                    sequence_.end());
-    throw;  //  Re-throw the current exception.
-  }
+  heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
 }
 #if (__cplusplus >= 201103L)
 template <typename T, typename S, typename C>
@@ -451,50 +470,63 @@ priority_deque<T, S, C>::priority_deque (InputIterator first,InputIterator last,
 : sequence_(std::move(seq)), compare_(comp)
 {
   sequence_.insert(sequence_.end(), first, last);
-  try {
-    heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-  } catch (...) {
-    sequence_.erase(sequence_.end() - std::distance(first, last),
-                    sequence_.end());
-    throw;  //  Re-throw the current exception.
-  }
+  heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
 }
 #endif
 
 //-----------------------------Restricted Access-------------------------------|
 //------------------------------Insert / Emplace-------------------------------|
 template <typename T, typename Sequence, typename Compare>
-void priority_deque<T, Sequence, Compare>::push (const value_type& value) {
+void priority_deque<T, Sequence, Compare>::push (value_type const & value) {
   sequence_.push_back(value);
-  try {
-    heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-  } catch (...) {
-    sequence_.pop_back();
-    throw;  //  Re-throw the current exception.
-  }
+
+  struct RAIIGuard
+  {
+    Sequence * ptr;
+    ~RAIIGuard (void)
+    {
+      if (ptr)
+        ptr->pop_back();
+    }
+  } guard;
+  guard.ptr = std::addressof(sequence_);
+  heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
+  guard.ptr = nullptr;
 }
 #if (__cplusplus >= 201103L)
 template <typename T, typename Sequence, typename Compare>
 void priority_deque<T, Sequence, Compare>::push (value_type&& value) {
   sequence_.push_back(std::move(value));
-  try {
-    heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-  } catch (...) {
-    sequence_.pop_back();
-    throw;  //  Re-throw the current exception.
-  }
+  struct RAIIGuard
+  {
+    Sequence * ptr;
+    ~RAIIGuard (void)
+    {
+      if (ptr)
+        ptr->pop_back();
+    }
+  } guard;
+  guard.ptr = std::addressof(sequence_);
+  heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
+  guard.ptr = nullptr;
 }
 
 template <typename T, typename Sequence, typename Compare>
 template<typename... Args>
 void priority_deque<T, Sequence, Compare>::emplace (Args&&... args) {
   sequence_.emplace_back(std::forward<Args>(args)...);
-  try {
-    heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-  } catch (...) {
-    sequence_.pop_back();
-    throw;  //  Re-throw the current exception.
-  }
+  struct RAIIGuard
+  {
+    Sequence * ptr;
+    ~RAIIGuard (void)
+    {
+      if (ptr)
+        ptr->pop_back();
+    }
+  } guard;
+  guard.ptr = std::addressof(sequence_);
+  heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
+  guard.ptr = nullptr;
 }
 #endif
 
@@ -523,13 +555,7 @@ void priority_deque<T, Sequence, Compare>::pop_minimum (void) {
   BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT(!empty(),
     "Empty priority deque has no maximal element. Removal impossible.");
   heap::pop_interval_heap_min(sequence_.begin(), sequence_.end(), compare_);
-  try {
-    sequence_.pop_back();
-  } catch (...) {
-//  If pop_back has a strong guarantee, this will restore the heap.
-    heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-    throw;  //  Re-throw the current exception.
-  }
+  pop_back_or_rollback();
 }
 
 template <typename T, typename Sequence, typename Compare>
@@ -537,13 +563,7 @@ void priority_deque<T, Sequence, Compare>::pop_maximum (void) {
   BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT(!empty(),
     "Empty priority deque has no minimal element. Removal undefined.");
   heap::pop_interval_heap_max(sequence_.begin(), sequence_.end(), compare_);
-  try {
-    sequence_.pop_back();
-  } catch (...) {
-//  If pop_back has a strong guarantee, this will restore the heap.
-    heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-    throw;  //  Re-throw the current exception.
-  }
+  pop_back_or_rollback();
 }
 
 //--------------------------Whole-Deque Operations-----------------------------|
@@ -554,15 +574,28 @@ void priority_deque<T, S, C>::clear (void) {
 //-----------------------------------Merge-------------------------------------|
 template <typename T, typename S, typename C>
 template <typename InputIterator>
-void priority_deque<T, S, C>::merge (InputIterator first, InputIterator last) {
+void priority_deque<T, S, C>::insert (InputIterator first, InputIterator last) {
   sequence_.insert(sequence_.end(), first, last);
-  try {
-    heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-  } catch (...) {
-    sequence_.erase(sequence_.end() - std::distance(first, last),
-                    sequence_.end());
-    throw;  //  Re-throw the current exception.
-  }
+  struct RAIIGuard
+  {
+    container_type * seq_;
+    RAIIGuard (container_type & seq) noexcept
+      : seq_(std::addressof(seq))
+    {
+    }
+    RAIIGuard (RAIIGuard const &);
+    RAIIGuard & operator= (RAIIGuard const &);
+    ~RAIIGuard (void)
+    {
+//    A heap-making failure is extremely difficult to resolve reliably. In
+//  particular, we no longer know which elements are new elements. To maintain
+//  the heap invariant, we may clear the sequence.
+      if (seq_)
+        seq_->clear();
+    }
+  } guard (sequence_);
+  heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
+  guard.seq_ = nullptr;
 }
 
 //----------------------------Swap Specialization------------------------------|
@@ -603,14 +636,11 @@ void priority_deque<T, S, C>::update (const_iterator random_it,
   BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT((0 <= ind) &&
     (ind < end() - begin()), "Iterator out of bounds; can't set element.");
 //  Providing the strong guarantee would require saving a copy.
-  std::swap(*(sequence_.begin() + ind), value);
-  try {
-    heap::update_interval_heap(sequence_.begin(),sequence_.end(),ind,compare_);
-  } catch (...) {
-//  Restore the original value.
-    std::swap(*(sequence_.begin() + ind), value);
-    throw;  //  Re-throw current exception.
-  }
+  typedef heap::interval_heap_internal::RAIISwapper<T> guard_t;
+  guard_t scope_guard (std::addressof(*(sequence_.begin() + ind)), std::addressof(value));
+  std::swap(*scope_guard.ptr1_, *scope_guard.ptr2_);
+  heap::update_interval_heap(sequence_.begin(),sequence_.end(),ind,compare_);
+  scope_guard.disable();
 }
 #endif
 
@@ -621,14 +651,32 @@ void priority_deque<T, Sequence, Compare>::erase (const_iterator random_it) {
     (index < end() - begin()), "Iterator out of bounds; can't erase element.");
 //  Move the element pointed to by random_it to the end of the sequence.
   heap::pop_interval_heap(sequence_.begin(), sequence_.end(), index,compare_);
-  try {
-//  Remove the (moved) element.
-    sequence_.pop_back();
-  } catch (...) {
+  pop_back_or_rollback();
+}
+
+template <typename T, typename Sequence, typename Compare>
+void priority_deque<T, Sequence, Compare>::pop_back_or_rollback (void)
+{
+  struct RAIIGuard
+  {
+    Sequence * seq_;
+    Compare & comp_;
+    RAIIGuard (Sequence & seq, Compare & comp) noexcept
+      : seq_(std::addressof(seq)), comp_(comp)
+    {
+    }
+    RAIIGuard (RAIIGuard const &);
+    RAIIGuard & operator= (RAIIGuard const &);
+    ~RAIIGuard (void)
+    {
 //  If pop_back failed, restore the heap property.
-    heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
-    throw;  //  Re-throw the current exception.
-  }
+      if (seq_)
+        heap::push_interval_heap(seq_->begin(), seq_->end(), comp_);
+    }
+  } guard (sequence_, compare_);
+//  Remove the (moved) element.
+  sequence_.pop_back();
+  guard.seq_ = nullptr;
 }
 
 } //  Namespace boost::container
