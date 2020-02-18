@@ -2,14 +2,8 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <iosfwd>
 #include <iostream>
-#include <iomanip>
-#include <chrono>
-#include <sstream>
 #include <cstdlib>
-#include <cstring>
-#include <random>
 #include <set>
 
 namespace
@@ -17,9 +11,11 @@ namespace
 template<class T, class T2>
 bool have_same_elements(T const & values, std::multiset<T2> rf)
 {
-  for (T2 const & val : values)
+  typedef typename T::const_iterator itr_t;
+  for (itr_t it = values.begin(); it != values.end(); ++it)
   {
-    auto set_it = rf.find(val);
+    typedef typename std::multiset<T2>::iterator set_itr_t;
+    set_itr_t set_it = rf.find(*it);
     if (set_it == rf.end())
       return false;
     else
@@ -68,11 +64,11 @@ BOOST_AUTO_TEST_CASE( priority_deque_iterator )
     for (int i = 0; i < push_count; ++i)
     {
       int pushed = rand();
-      existing_elements.emplace(pushed);
+      existing_elements.insert(pushed);
       pd.push(pushed);
     }
 
-    BOOST_TEST_REQUIRE(have_same_elements(pd, std::move(existing_elements)));
+    BOOST_TEST_REQUIRE(have_same_elements(pd, existing_elements));
   }
 }
 
@@ -82,14 +78,15 @@ BOOST_AUTO_TEST_CASE( priority_deque_range_constructor_clear )
 
   std::multiset<int> existing_elements;
   for (int i = 0; i < 512; ++i)
-    existing_elements.emplace(rand());
-  priority_deque<int> pd { existing_elements.begin(), existing_elements.end() };
+    existing_elements.insert(rand());
+  priority_deque<int> pd ( existing_elements.begin(), existing_elements.end() );
 
-  BOOST_TEST_REQUIRE(have_same_elements(pd, std::move(existing_elements)));
+  BOOST_TEST_REQUIRE(have_same_elements(pd, existing_elements));
   pd.clear();
   BOOST_TEST_REQUIRE(pd.empty());
 }
 
+#if (__cplusplus >= 201103L)
 BOOST_AUTO_TEST_CASE( priority_deque_emplace )
 {
   using namespace boost::container;
@@ -99,12 +96,13 @@ BOOST_AUTO_TEST_CASE( priority_deque_emplace )
   for (int i = 0; i < 512; ++i)
   {
     int newval = rand();
-    existing_elements.emplace(newval);
+    existing_elements.insert(newval);
     pd.emplace(newval);
   }
 
   BOOST_TEST_REQUIRE(have_same_elements(pd, std::move(existing_elements)));
 }
+#endif
 
 BOOST_AUTO_TEST_CASE( priority_deque_insert )
 {
@@ -112,15 +110,15 @@ BOOST_AUTO_TEST_CASE( priority_deque_insert )
 
   std::multiset<int> existing_elements, new_vals;
   for (int i = 0; i < 517; ++i)
-    existing_elements.emplace(rand());
+    existing_elements.insert(rand());
   for (int j = 0; j < 139; ++j)
-    new_vals.emplace(rand());
+    new_vals.insert(rand());
   priority_deque<int> pd;
   pd.insert(existing_elements.begin(), existing_elements.end());
   BOOST_TEST_REQUIRE(have_same_elements(pd, existing_elements));
   pd.insert(new_vals.begin(), new_vals.end());
   existing_elements.insert(new_vals.begin(), new_vals.end());
-  BOOST_TEST_REQUIRE(have_same_elements(pd, std::move(existing_elements)));
+  BOOST_TEST_REQUIRE(have_same_elements(pd, existing_elements));
 }
 
 BOOST_AUTO_TEST_CASE( priority_deque_insert_few )
@@ -129,15 +127,15 @@ BOOST_AUTO_TEST_CASE( priority_deque_insert_few )
 
   std::multiset<int> existing_elements, new_vals;
   for (int i = 0; i < 1; ++i)
-    existing_elements.emplace(rand());
+    existing_elements.insert(rand());
   for (int j = 0; j < 1; ++j)
-    new_vals.emplace(rand());
+    new_vals.insert(rand());
   priority_deque<int> pd;
   pd.insert(existing_elements.begin(), existing_elements.end());
   BOOST_TEST_REQUIRE(have_same_elements(pd, existing_elements));
   pd.insert(new_vals.begin(), new_vals.end());
   existing_elements.insert(new_vals.begin(), new_vals.end());
-  BOOST_TEST_REQUIRE(have_same_elements(pd, std::move(existing_elements)));
+  BOOST_TEST_REQUIRE(have_same_elements(pd, existing_elements));
 }
 
 BOOST_AUTO_TEST_CASE( priority_deque_min_max )
@@ -152,17 +150,17 @@ BOOST_AUTO_TEST_CASE( priority_deque_min_max )
     for (int i = 0; i < push_count; ++i)
     {
       int pushed = rand();
-      existing_elements.emplace(pushed);
+      existing_elements.insert(pushed);
       pd.push(pushed);
     }
 
     int minval = *existing_elements.begin();
     int maxval = minval;
 
-    for (auto const & val : existing_elements)
+    for (std::multiset<int>::iterator it = existing_elements.begin(); it != existing_elements.end(); ++it)
     {
-      minval = (val < minval) ? val : minval;
-      maxval = (val > maxval) ? val : maxval;
+      minval = (*it < minval) ? *it : minval;
+      maxval = (*it > maxval) ? *it : maxval;
     }
 
     BOOST_TEST_REQUIRE(pd.maximum() == maxval);
@@ -183,7 +181,7 @@ BOOST_AUTO_TEST_CASE( priority_deque_pop_max )
     for (int i = 0; i < push_count; ++i)
     {
       int pushed = rand();
-      existing_elements.emplace(pushed);
+      existing_elements.insert(pushed);
       pd.push(pushed);
     }
 
@@ -192,15 +190,15 @@ BOOST_AUTO_TEST_CASE( priority_deque_pop_max )
       int minval = *existing_elements.begin();
       int maxval = minval;
 
-      for (auto const & val : existing_elements)
+      for (std::multiset<int>::iterator it = existing_elements.begin(); it != existing_elements.end(); ++it)
       {
-        minval = (val < minval) ? val : minval;
-        maxval = (val > maxval) ? val : maxval;
+        minval = (*it < minval) ? *it : minval;
+        maxval = (*it > maxval) ? *it : maxval;
       }
 
       BOOST_TEST_REQUIRE(pd.maximum() == maxval);
       BOOST_TEST_REQUIRE(pd.minimum() == minval);
-      auto maxit = existing_elements.find(maxval);
+      std::multiset<int>::iterator maxit = existing_elements.find(maxval);
       existing_elements.erase(maxit);
       pd.pop_maximum();
       BOOST_TEST_REQUIRE(have_same_elements(pd, existing_elements));
@@ -220,7 +218,7 @@ BOOST_AUTO_TEST_CASE( priority_deque_pop_min )
     for (int i = 0; i < push_count; ++i)
     {
       int pushed = rand();
-      existing_elements.emplace(pushed);
+      existing_elements.insert(pushed);
       pd.push(pushed);
     }
 
@@ -229,15 +227,15 @@ BOOST_AUTO_TEST_CASE( priority_deque_pop_min )
       int minval = *existing_elements.begin();
       int maxval = minval;
 
-      for (auto const & val : existing_elements)
+      for (std::multiset<int>::iterator it = existing_elements.begin(); it != existing_elements.end(); ++it)
       {
-        minval = (val < minval) ? val : minval;
-        maxval = (val > maxval) ? val : maxval;
+        minval = (*it < minval) ? *it : minval;
+        maxval = (*it > maxval) ? *it : maxval;
       }
 
       BOOST_TEST_REQUIRE(pd.maximum() == maxval);
       BOOST_TEST_REQUIRE(pd.minimum() == minval);
-      auto minit = existing_elements.find(minval);
+      std::multiset<int>::iterator minit = existing_elements.find(minval);
       existing_elements.erase(minit);
       pd.pop_minimum();
       BOOST_TEST_REQUIRE(have_same_elements(pd, existing_elements));
@@ -256,7 +254,7 @@ BOOST_AUTO_TEST_CASE( priority_deque_swap )
     {
       int pushed = rand();
       int push_loc = rand() & 1;
-      st[push_loc].emplace(pushed);
+      st[push_loc].insert(pushed);
       pd[push_loc].push(pushed);
     }
 
@@ -277,19 +275,19 @@ BOOST_AUTO_TEST_CASE( priority_deque_random_update )
 
   std::multiset<int> existing_elements;
   for (int i = 0; i < 313; ++i)
-    existing_elements.emplace(rand());
-  priority_deque<int> pd { existing_elements.begin(), existing_elements.end() };
+    existing_elements.insert(rand());
+  priority_deque<int> pd ( existing_elements.begin(), existing_elements.end() );
 
   BOOST_TEST_REQUIRE(have_same_elements(pd, existing_elements));
 
   for (int i = 0; i < 1024; ++i)
   {
-    auto it = pd.begin() + (rand() % pd.size());
+    priority_deque<int>::iterator it = pd.begin() + (rand() % pd.size());
 
     int newval = rand();
-    auto set_it = existing_elements.find(*it);
+    std::multiset<int>::iterator set_it = existing_elements.find(*it);
     existing_elements.erase(set_it);
-    existing_elements.emplace(newval);
+    existing_elements.insert(newval);
     pd.update(it, newval);
 
     BOOST_TEST_REQUIRE(have_same_elements(pd, existing_elements));
@@ -302,20 +300,20 @@ BOOST_AUTO_TEST_CASE( priority_deque_random_update_move )
 
   std::multiset<int> existing_elements;
   for (int i = 0; i < 313; ++i)
-    existing_elements.emplace(rand());
-  priority_deque<int> pd { existing_elements.begin(), existing_elements.end() };
+    existing_elements.insert(rand());
+  priority_deque<int> pd ( existing_elements.begin(), existing_elements.end() );
 
   BOOST_TEST_REQUIRE(have_same_elements(pd, existing_elements));
 
   for (int i = 0; i < 1024; ++i)
   {
-    auto it = pd.begin() + (rand() % pd.size());
+    priority_deque<int>::iterator it = pd.begin() + (rand() % pd.size());
 
     int newval = rand();
-    auto set_it = existing_elements.find(*it);
+    std::multiset<int>::iterator set_it = existing_elements.find(*it);
     existing_elements.erase(set_it);
-    existing_elements.emplace(newval);
-    pd.update(it, std::move(newval));
+    existing_elements.insert(newval);
+    pd.update(it, newval);
 
     BOOST_TEST_REQUIRE(have_same_elements(pd, existing_elements));
   }
@@ -327,16 +325,16 @@ BOOST_AUTO_TEST_CASE( priority_deque_random_erase )
 
   std::multiset<int> existing_elements;
   for (int i = 0; i < 313; ++i)
-    existing_elements.emplace(rand());
-  priority_deque<int> pd { existing_elements.begin(), existing_elements.end() };
+    existing_elements.insert(rand());
+  priority_deque<int> pd ( existing_elements.begin(), existing_elements.end() );
 
   BOOST_TEST_REQUIRE(have_same_elements(pd, existing_elements));
 
   for (int i = 0; i < 313; ++i)
   {
-    auto it = pd.begin() + (rand() % pd.size());
+    priority_deque<int>::iterator it = pd.begin() + (rand() % pd.size());
 
-    auto set_it = existing_elements.find(*it);
+    std::multiset<int>::iterator set_it = existing_elements.find(*it);
     existing_elements.erase(set_it);
     pd.erase(it);
 

@@ -489,9 +489,17 @@ void priority_deque<T, Sequence, Compare>::push (value_type const & value) {
         ptr->pop_back();
     }
   } guard;
+#if (__cplusplus >= 201103L)
   guard.ptr = std::addressof(sequence_);
+#else
+  guard.ptr = &sequence_;
+#endif
   heap::push_interval_heap(sequence_.begin(), sequence_.end(), compare_);
+#if (__cplusplus >= 201103L)
   guard.ptr = nullptr;
+#else
+  guard.ptr = NULL;
+#endif
 }
 #if (__cplusplus >= 201103L)
 template <typename T, typename Sequence, typename Compare>
@@ -579,10 +587,11 @@ void priority_deque<T, S, C>::insert (InputIterator first, InputIterator last) {
   struct RAIIGuard
   {
     container_type * seq_;
-    RAIIGuard (container_type & seq) noexcept
-      : seq_(std::addressof(seq))
-    {
-    }
+#if (__cplusplus >= 201103L)
+    RAIIGuard (container_type & seq) noexcept : seq_(std::addressof(seq)) {}
+#else
+    RAIIGuard (container_type & seq) : seq_(&seq) {}
+#endif
     RAIIGuard (RAIIGuard const &);
     RAIIGuard & operator= (RAIIGuard const &);
     ~RAIIGuard (void)
@@ -595,7 +604,11 @@ void priority_deque<T, S, C>::insert (InputIterator first, InputIterator last) {
     }
   } guard (sequence_);
   heap::make_interval_heap(sequence_.begin(), sequence_.end(), compare_);
+#if (__cplusplus >= 201103L)
   guard.seq_ = nullptr;
+#else
+  guard.seq_ = NULL;
+#endif
 }
 
 //----------------------------Swap Specialization------------------------------|
@@ -661,8 +674,12 @@ void priority_deque<T, Sequence, Compare>::pop_back_or_rollback (void)
   {
     Sequence * seq_;
     Compare & comp_;
-    RAIIGuard (Sequence & seq, Compare & comp) noexcept
-      : seq_(std::addressof(seq)), comp_(comp)
+    RAIIGuard (Sequence & seq, Compare & comp)
+#if (__cplusplus >= 201103L)
+      noexcept : seq_(std::addressof(seq)), comp_(comp)
+#else
+      : seq_(&seq), comp_(comp)
+#endif
     {
     }
     RAIIGuard (RAIIGuard const &);
@@ -676,7 +693,11 @@ void priority_deque<T, Sequence, Compare>::pop_back_or_rollback (void)
   } guard (sequence_, compare_);
 //  Remove the (moved) element.
   sequence_.pop_back();
+#if (__cplusplus >= 201103L)
   guard.seq_ = nullptr;
+#else
+  guard.seq_ = NULL;
+#endif
 }
 
 } //  Namespace boost::container

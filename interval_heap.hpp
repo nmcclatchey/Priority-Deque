@@ -152,11 +152,10 @@ struct RAIISwapper
 
   inline void disable (void)
 #if (__cplusplus >= 201103L)
-  noexcept
+  noexcept { ptr1_ = nullptr; }
+#else
+  { ptr1_ = NULL; }
 #endif
-  {
-    ptr1_ = nullptr;
-  }
   T * ptr1_, * ptr2_;
 };
 } //  Namespace interval_heap_internal
@@ -238,7 +237,11 @@ void pop_interval_heap (Iterator first, Iterator last,
   typedef interval_heap_internal::RAIISwapper<typename std::iterator_traits<Iterator>::value_type> guard_t;
   using namespace std;
   --last;
+#if (__cplusplus >= 201103L)
   guard_t scope_guard (std::addressof(*(first + index)), std::addressof(*last));
+#else
+  guard_t scope_guard (&(*(first + index)), &(*last));
+#endif
   swap(*scope_guard.ptr1_, *scope_guard.ptr2_);
   update_interval_heap<Iterator, Compare>(first, last, index, compare);
   scope_guard.disable();
@@ -269,7 +272,11 @@ void pop_interval_heap_min (Iterator first, Iterator last, Compare compare) {
   --last;
   swap(*first, *last);
   typedef interval_heap_internal::RAIISwapper<typename std::iterator_traits<Iterator>::value_type> guard_t;
+#if (__cplusplus >= 201103L)
   guard_t scope_guard (std::addressof(*first), std::addressof(*last));
+#else
+  guard_t scope_guard (&(*first), &(*last));
+#endif
   sift_down<true, Iterator, Offset, Compare>(first, last, 0, compare, 2);
   scope_guard.disable();
 }
@@ -300,7 +307,11 @@ void pop_interval_heap_max (Iterator first, Iterator last, Compare compare) {
     return;
   --last;
   typedef interval_heap_internal::RAIISwapper<typename std::iterator_traits<Iterator>::value_type> guard_t;
+#if (__cplusplus >= 201103L)
   guard_t scope_guard (std::addressof(*(first + 1)), std::addressof(*last));
+#else
+  guard_t scope_guard (&(*(first + 1)), &(*last));
+#endif
   swap(*scope_guard.ptr1_, *scope_guard.ptr2_);
   sift_down<false, Iterator, Offset, Compare>(first, last, 1, compare, 2);
   scope_guard.disable();
@@ -598,7 +609,11 @@ void sift_leaf_max (Iterator first, Iterator last, Offset index,
                             ? (index ^ 1) : (index * 2);
   if (compare(*(first + index), *(first + co_index))) {
     typedef interval_heap_internal::RAIISwapper<typename std::iterator_traits<Iterator>::value_type> guard_t;
+#if (__cplusplus >= 201103L)
     guard_t scope_guard (std::addressof(*(first + index)), std::addressof(*(first + co_index)));
+#else
+    guard_t scope_guard (&(*(first + index)), &(*(first + co_index)));
+#endif
     swap(*scope_guard.ptr1_, *scope_guard.ptr2_);
     sift_up<true, Iterator, Offset, Compare>(first, co_index, compare,
                                              limit_child);
@@ -629,7 +644,11 @@ void sift_leaf_min (Iterator first, Iterator last, Offset index,
   }
   if (compare(*(first + co_index), *(first + index))) {
     typedef interval_heap_internal::RAIISwapper<typename std::iterator_traits<Iterator>::value_type> guard_t;
+#if (__cplusplus >= 201103L)
     guard_t scope_guard (std::addressof(*(first + index)), std::addressof(*(first + co_index)));
+#else
+    guard_t scope_guard (&(*(first + index)), &(*(first + co_index)));
+#endif
     swap(*scope_guard.ptr1_, *scope_guard.ptr2_);
     sift_up<false, Iterator, Offset, Compare>(first, co_index, compare,
                                               limit_child);

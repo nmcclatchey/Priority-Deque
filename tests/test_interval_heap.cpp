@@ -2,33 +2,30 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <iosfwd>
 #include <iostream>
-#include <iomanip>
-#include <chrono>
-#include <sstream>
 #include <cstdlib>
-#include <cstring>
-#include <random>
 
+int kArrHeap [] = { 0, 19, 2, 19, 15, 16, 4, 5, 7 };
 
 BOOST_AUTO_TEST_CASE( interval_heap_is_heap )
 {
   using namespace boost::heap;
-  std::vector<int> empty_arr { };
+  std::vector<int> empty_arr = std::vector<int>();
   BOOST_TEST_REQUIRE(is_interval_heap(empty_arr.begin(), empty_arr.end(), std::less<int>()));
 
-  std::vector<int> heap_arr { 0, 19, 2, 19, 15, 16, 4, 5, 7 };
+  std::vector<int> heap_arr;
+  heap_arr.insert(heap_arr.end(), kArrHeap, kArrHeap + (sizeof(kArrHeap) / sizeof(kArrHeap[0])));
   BOOST_TEST_REQUIRE(is_interval_heap(heap_arr.begin(), heap_arr.end(), std::less<int>()));
 
-  std::vector<int> non_heap_arr { 0, 16, 2, 19, 15, 16, 4, 5, 7 };
-  BOOST_TEST_REQUIRE(!is_interval_heap(non_heap_arr.begin(), non_heap_arr.end(), std::less<int>()));
+  heap_arr[1] = 16;
+  BOOST_TEST_REQUIRE(!is_interval_heap(heap_arr.begin(), heap_arr.end(), std::less<int>()));
 }
 
 BOOST_AUTO_TEST_CASE( interval_heap_is_until )
 {
   using namespace boost::heap;
-  std::vector<int> heap_arr { 0, 19, 2, 19, 15, 16, 4, 5, 7 };
+  std::vector<int> heap_arr;
+  heap_arr.insert(heap_arr.end(), kArrHeap, kArrHeap + (sizeof(kArrHeap) / sizeof(kArrHeap[0])));
   BOOST_TEST_REQUIRE((is_interval_heap_until(heap_arr.begin(), heap_arr.end(), std::less<int>()) == heap_arr.end()));
 
   heap_arr.push_back(21);
