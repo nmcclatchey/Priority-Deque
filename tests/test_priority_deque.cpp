@@ -23,6 +23,230 @@ bool have_same_elements(T const & values, std::multiset<T2> rf)
   }
   return rf.empty();
 }
+
+struct ThrowingElement
+{
+  static long throw_on_move_assign;
+  static long throw_on_copy_assign;
+  static long throw_on_move_construct;
+  static long throw_on_copy_construct;
+  static long throw_on_compare;
+
+  int value;
+  bool valid;
+
+  ThrowingElement (void)
+    : value(0), valid(false)
+  {
+  }
+
+  ThrowingElement (int n)
+    : value(n), valid(true)
+  {
+  }
+
+  ThrowingElement (ThrowingElement const & rhs)
+    : value(rhs.value), valid(rhs.valid)
+  {
+    if (--throw_on_copy_construct == 0)
+      throw std::runtime_error("Copy constructor exception.");
+  }
+
+  ThrowingElement & operator= (ThrowingElement const & rhs)
+  {
+    if (--throw_on_copy_assign == 0)
+      throw std::runtime_error("Copy assignment exception.");
+    value = rhs.value;
+    valid = rhs.valid;
+    return *this;
+  }
+
+#if __cplusplus >= 201103L
+  ThrowingElement (ThrowingElement && rhs)
+    : value(rhs.value), valid(rhs.valid)
+  {
+    if (--throw_on_move_construct == 0)
+      throw std::runtime_error("Move constructor exception.");
+    rhs.valid = false;
+  }
+
+  ThrowingElement & operator= (ThrowingElement && rhs)
+  {
+    if (--throw_on_move_assign == 0)
+      throw std::runtime_error("Move assignment exception.");
+    value = rhs.value;
+    valid = rhs.valid;
+    rhs.valid = false;
+    return *this;
+  }
+#endif
+
+  ~ThrowingElement (void)
+  {
+  }
+
+  bool operator< (ThrowingElement const & rhs) const
+  {
+    if (--throw_on_compare == 0)
+      throw std::runtime_error("Comparison exception.");
+    return value < rhs.value;
+  }
+};
+
+long ThrowingElement::throw_on_move_assign = -1;
+long ThrowingElement::throw_on_copy_assign = -1;
+long ThrowingElement::throw_on_move_construct = -1;
+long ThrowingElement::throw_on_copy_construct = -1;
+long ThrowingElement::throw_on_compare = -1;
+
+template<class T>
+struct ThrowingContainer
+{
+  static long throw_on_push;
+  static long throw_on_pop;
+
+  std::vector<T> values;
+
+  typedef typename std::vector<T>::iterator iterator;
+  typedef typename std::vector<T>::const_iterator const_iterator;
+  typedef typename std::vector<T>::value_type value_type;
+  typedef typename std::vector<T>::reference reference;
+  typedef typename std::vector<T>::size_type size_type;
+  typedef typename std::vector<T>::const_reference const_reference;
+  typedef typename std::vector<T>::pointer pointer;
+  typedef typename std::vector<T>::difference_type difference_type;
+
+  ThrowingContainer (void)
+    : values()
+  {
+  }
+
+  iterator begin (void)
+  {
+    return values.begin();
+  }
+
+  iterator end (void)
+  {
+    return values.end();
+  }
+
+  const_iterator begin (void) const
+  {
+    return values.begin();
+  }
+
+  const_iterator end (void) const
+  {
+    return values.end();
+  }
+
+  void push_back (T const & val)
+  {
+    if (--throw_on_push == 0)
+      throw std::runtime_error("Push exception.");
+    values.push_back(val);
+  }
+
+#if __cplusplus >= 201103L
+  template<class ... Args>
+  void emplace_back (Args&&... args)
+  {
+    if (--throw_on_push == 0)
+      throw std::runtime_error("Emplace exception.");
+    values.emplace_back(std::forward<Args>(args)...);
+  }
+#endif
+
+  void pop_back (void)
+  {
+    if (--throw_on_pop == 0)
+      throw std::runtime_error("Pop exception.");
+    values.pop_back();
+  }
+
+  bool empty (void) const
+  {
+    return values.empty();
+  }
+
+  size_type size (void) const
+  {
+    return values.size();
+  }
+};
+
+template<class T>
+long ThrowingContainer<T>::throw_on_push = -1;
+
+template<class T>
+long ThrowingContainer<T>::throw_on_pop = -1;
+}
+
+BOOST_AUTO_TEST_CASE( priority_push_pop_element_exceptions )
+{
+  using namespace boost::container;
+  priority_deque<ThrowingElement> pd;
+  BOOST_TEST_REQUIRE(pd.empty());
+  for (int i = 0; i < 91; ++i)
+  {
+    BOOST_TEST_REQUIRE(pd.size() == i);
+    pd.push(ThrowingElement(i));
+    BOOST_TEST_REQUIRE(!pd.empty());
+  }
+
+  priority_deque<ThrowingElement> copied_pd = pd;
+
+  ThrowingElement::throw_on_compare = 3;
+  BOOST_REQUIRE_THROW(pd.push(ThrowingElement(36)), std::runtime_error);
+  BOOST_TEST_REQUIRE(pd.size() == copied_pd.size());
+  //for (auto it = pd.begin(); it != pd.end(); ++it)
+
+#if __cplusplus >= 201103L
+  ThrowingElement::throw_on_compare = 3;
+  BOOST_REQUIRE_THROW(pd.emplace(36), std::runtime_error);
+  BOOST_TEST_REQUIRE(pd.size() == copied_pd.size());
+#endif
+
+  ThrowingElement::throw_on_compare = 3;
+  ThrowingElement reference_element = ThrowingElement(36);
+  BOOST_REQUIRE_THROW(pd.push(reference_element), std::runtime_error);
+  BOOST_TEST_REQUIRE(pd.size() == copied_pd.size());
+
+  ThrowingElement::throw_on_compare = 3;
+  BOOST_REQUIRE_THROW(pd.pop_minimum(), std::runtime_error);
+  BOOST_TEST_REQUIRE(pd.size() == copied_pd.size());
+
+  ThrowingElement::throw_on_compare = 3;
+  BOOST_REQUIRE_THROW(pd.pop_maximum(), std::runtime_error);
+  BOOST_TEST_REQUIRE(pd.size() == copied_pd.size());
+}
+
+BOOST_AUTO_TEST_CASE( priority_push_pop_container_exceptions )
+{
+  using namespace boost::container;
+  priority_deque<int, ThrowingContainer<int> > pd;
+  BOOST_TEST_REQUIRE(pd.empty());
+  for (int i = 0; i < 91; ++i)
+  {
+    BOOST_TEST_REQUIRE(pd.size() == i);
+    pd.push(i);
+    BOOST_TEST_REQUIRE(!pd.empty());
+  }
+
+  priority_deque<int, ThrowingContainer<int> > copied_pd = pd;
+
+  ThrowingContainer<int>::throw_on_push = 1;
+  BOOST_REQUIRE_THROW(pd.push(36), std::runtime_error);
+  BOOST_TEST_REQUIRE(pd.size() == copied_pd.size());
+
+  ThrowingContainer<int>::throw_on_pop = 1;
+  BOOST_REQUIRE_THROW(pd.pop_minimum(), std::runtime_error);
+  BOOST_TEST_REQUIRE(pd.size() == copied_pd.size());
+
+  ThrowingContainer<int>::throw_on_pop = 1;
+  BOOST_REQUIRE_THROW(pd.pop_maximum(), std::runtime_error);
+  BOOST_TEST_REQUIRE(pd.size() == copied_pd.size());
 }
 
 BOOST_AUTO_TEST_CASE( priority_deque_empty_size )
