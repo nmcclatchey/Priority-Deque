@@ -616,8 +616,10 @@ template <typename T, typename S, typename C>
 inline void priority_deque<T, S, C>::swap (priority_deque<T, S, C>& other) {
   using std::swap;
 
-  swap(compare_, other.compare_);
-  sequence_.swap(other.sequence_);
+  if (this != &other) {
+    swap(compare_, other.compare_);
+    sequence_.swap(other.sequence_);
+  }
 }
 
 template <typename T, typename S, typename C>
@@ -645,13 +647,14 @@ template <typename T, typename S, typename C>
 void priority_deque<T, S, C>::update (const_iterator random_it,
                                       value_type&& value)
 {
+  using std::swap;
   const difference_type ind = random_it - begin();
   BOOST_CONTAINER_PRIORITY_DEQUE_ASSERT((0 <= ind) &&
     (ind < end() - begin()), "Iterator out of bounds; can't set element.");
 //  Providing the strong guarantee would require saving a copy.
   typedef heap::interval_heap_internal::RAIISwapper<T> guard_t;
   guard_t scope_guard (std::addressof(*(sequence_.begin() + ind)), std::addressof(value));
-  std::swap(*scope_guard.ptr1_, *scope_guard.ptr2_);
+  swap(*scope_guard.ptr1_, *scope_guard.ptr2_);
   heap::update_interval_heap(sequence_.begin(),sequence_.end(),ind,compare_);
   scope_guard.disable();
 }

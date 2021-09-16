@@ -237,14 +237,16 @@ void pop_interval_heap (Iterator first, Iterator last,
   typedef interval_heap_internal::RAIISwapper<typename std::iterator_traits<Iterator>::value_type> guard_t;
   using namespace std;
   --last;
+  if (first + index != last) {
 #if (__cplusplus >= 201103L)
-  guard_t scope_guard (std::addressof(*(first + index)), std::addressof(*last));
+    guard_t scope_guard (std::addressof(*(first + index)), std::addressof(*last));
 #else
-  guard_t scope_guard (&(*(first + index)), &(*last));
+    guard_t scope_guard (&(*(first + index)), &(*last));
 #endif
-  swap(*scope_guard.ptr1_, *scope_guard.ptr2_);
-  update_interval_heap<Iterator, Compare>(first, last, index, compare);
-  scope_guard.disable();
+    swap(*scope_guard.ptr1_, *scope_guard.ptr2_);
+    update_interval_heap<Iterator, Compare>(first, last, index, compare);
+    scope_guard.disable();
+  }
 //  If the update throws, the scope guard will undo it.
 }
 
@@ -270,15 +272,17 @@ void pop_interval_heap_min (Iterator first, Iterator last, Compare compare) {
   using interval_heap_internal::sift_down;
   typedef typename iterator_traits<Iterator>::difference_type Offset;
   --last;
-  swap(*first, *last);
-  typedef interval_heap_internal::RAIISwapper<typename std::iterator_traits<Iterator>::value_type> guard_t;
+  if (first != last) {
+    swap(*first, *last);
+    typedef interval_heap_internal::RAIISwapper<typename std::iterator_traits<Iterator>::value_type> guard_t;
 #if (__cplusplus >= 201103L)
-  guard_t scope_guard (std::addressof(*first), std::addressof(*last));
+    guard_t scope_guard (std::addressof(*first), std::addressof(*last));
 #else
-  guard_t scope_guard (&(*first), &(*last));
+    guard_t scope_guard (&(*first), &(*last));
 #endif
-  sift_down<true, Iterator, Offset, Compare>(first, last, 0, compare, 2);
-  scope_guard.disable();
+    sift_down<true, Iterator, Offset, Compare>(first, last, 0, compare, 2);
+    scope_guard.disable();
+  }
 }
 
 /*! @details This function moves a maximal element to the end of the range of
