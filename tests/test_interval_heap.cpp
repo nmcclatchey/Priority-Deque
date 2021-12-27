@@ -41,6 +41,30 @@ BOOST_AUTO_TEST_CASE( interval_heap_is_until )
   BOOST_TEST_REQUIRE((is_interval_heap_until(heap_arr.begin(), heap_arr.end(), std::less<int>()) == heap_arr.end()));
 }
 
+BOOST_AUTO_TEST_CASE( interval_heap_pop_max )
+{
+  using namespace boost::heap;
+  std::vector<int> heap_arr;
+  //  Test empty (NOP)
+  pop_interval_heap_max(heap_arr.begin(), heap_arr.end(), std::less<int>());
+  heap_arr.insert(heap_arr.end(), kArrHeap, kArrHeap + 1);
+  //  Test 1 element (NOP)
+  pop_interval_heap_max(heap_arr.begin(), heap_arr.end(), std::less<int>());
+  heap_arr.insert(heap_arr.end(), kArrHeap + 1, kArrHeap + 2);
+  //  Test 2 elements (NOP)
+  make_interval_heap(heap_arr.begin(), heap_arr.end(), std::less<int>());
+  pop_interval_heap_max(heap_arr.begin(), heap_arr.end(), std::less<int>());
+  //  Must be unchanged.
+  BOOST_TEST_REQUIRE((heap_arr.front() == 0));
+
+  heap_arr.insert(heap_arr.end(), kArrHeap + 4, kArrHeap + 9);
+  //  Test 5 elements
+  make_interval_heap(heap_arr.begin(), heap_arr.end(), std::less<int>());
+  pop_interval_heap_max(heap_arr.begin(), heap_arr.end(), std::less<int>());
+  BOOST_TEST_REQUIRE((heap_arr.front() == 0));
+  BOOST_TEST_REQUIRE((heap_arr[1] == 16));
+}
+
 BOOST_AUTO_TEST_CASE( interval_heap_sorting )
 {
   using namespace boost::heap;
