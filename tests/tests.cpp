@@ -59,17 +59,17 @@ int main() {
       test_deque.push(i);
       if (std::find(test_deque.begin(), test_deque.end(), i) == test_deque.end()) {
         std::cerr << "Element lost <push>.\n";
-        break;
+        return 1;
       }
       if (!is_interval_heap(test_deque.begin(), test_deque.end(), std::less<int>())) {
         std::cerr << "Heap corrupted <push>.\n";
-        break;
+        return 1;
       }
       if (test_deque.maximum() != i)
         std::cerr << "Incorrect maximum. i = " << i << "\n";
     } catch (...) {
       std::cerr << "Exception thrown <push>.\n";
-      break;
+      return 1;
     }
   }
 
@@ -86,16 +86,16 @@ int main() {
       for (int j = 0; j <= i; ++j) {
         if (std::find(test_deque.begin(), test_deque.end(), j) == test_deque.end()) {
           std::cerr << "Element removed <merge>.\n";
-          break;
+          return 1;
         }
       }
       if (!is_interval_heap(test_deque.begin(), test_deque.end(), std::less<int>())) {
         std::cerr << "Heap corrupted <merge>.\n";
-        break;
+        return 1;
       }
     } catch (...) {
       std::cerr << "Exception thrown <merge>.\n";
-      break;
+      return 1;
     }
   }
 }
@@ -110,7 +110,7 @@ int main() {
 		pd.push(rand());
 		if (is_valid_until(pd) != pd.end()) {
 		  std::cout << "Failed push (error in replace_leaf)\n";
-      break;
+      return 1;
 		}
 	}
 
@@ -148,16 +148,50 @@ int main() {
     pd.update(pd.begin() + rand() % pd.size(), rand());
 		if (is_valid_until(pd) != pd.end()) {
 		  std::cout << "Failed random-access set (error in replace)\n";
-      break;
+      return 1;
 		}
   }
 
   std::cout << "'pop_minimum' (" << pd.size() << "x)\n";
+  int last_min = pd.minimum();
 	while (!pd.empty()) {
 		pd.pop_minimum();
+    if (!pd.empty())
+    {
+      int new_min = pd.minimum();
+      if (new_min < last_min)
+      {
+        std::cout << "Failed priority queue property during pop_minimum.\n";
+        return 1;
+      }
+    }
 		if (is_valid_until(pd) != pd.end()) {
 		  std::cout << "Failed pop_minimum (error in replace)\n";
-      break;
+      return 1;
+		}
+	}
+  pd.clear();
+
+  for (int n = 1; n <= 64; ++n)
+  {
+    pd.push(rand());
+  }
+
+  int last_max = pd.maximum();
+  while (!pd.empty()) {
+		pd.pop_maximum();
+    if (!pd.empty())
+    {
+      int new_max = pd.maximum();
+      if (new_max > last_max)
+      {
+        std::cout << "Failed priority queue property during pop_maximum.\n";
+        return 1;
+      }
+    }
+		if (is_valid_until(pd) != pd.end()) {
+		  std::cout << "Failed pop_maximum (error in replace)\n";
+      return 1;
 		}
 	}
   pd.clear();
@@ -185,7 +219,7 @@ int main() {
     }
     if (is_valid_until(pd) != pd.end()) {
       std::cout << "An error has occurred! (code " << last_rand << ").\n";
-      break;
+      return 1;
     }
   }
 #endif
